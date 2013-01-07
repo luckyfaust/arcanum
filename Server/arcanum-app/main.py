@@ -16,13 +16,12 @@
 #
 
 from Crypto import Random
-from Crypto.Hash import SHA
+from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 
 from cgi import escape
 from google.appengine.ext import db
 
-import base64
 import json
 import webapp2
 
@@ -42,22 +41,13 @@ class MainHandler(webapp2.RequestHandler):
         
 class AuthHandler(webapp2.RequestHandler):
     def get(self):
-        pem = open('publicKey.pem', 'r')
+        pem = open('key.pub', 'r')
         publicKey = pem.read()
-
-        #pem = open('privKey.pem', 'r')
-        #keys = RSA.importKey(pem.read(), passphrase='Arcanum')
         pem.close()
 
-        #publicKey = keys.publickey().exportKey(format='PEM')
         self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
         self.response.write(publicKey)
 
-        #self.response.write('\n')
-        #if keys.has_private():
-        #self.response.write('Loading private key: success.')
-        #else:
-        #    self.response.write('Loading private key: failed.')
     def post(self):
         self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
         user = User()
@@ -92,80 +82,40 @@ class ContactHandler(webapp2.RequestHandler):
 class MessageHandler(webapp2.RequestHandler):
     def post(self):
         message = self.request.body
-        self.response.write('<p>Secret-Message</p>')
+        self.response.write('<p>Message</p>')
         self.response.write('<p>' + escape(message) + '</p>')
 
-        # Load private Key
-        #pem = open('privKey.pem', 'r')
-        #keys = RSA.importKey(pem.read(), passphrase='Arcanum')
-        #pem.close()
-
+        # Load public Key from User
+        
         # Verify message
         # !Attention!: this function performs the plain, primitive RSA encryption (textbook). In real applications, you always need to use proper cryptographic padding, and you should not directly verify data with this method. Failure to do so may lead to security vulnerabilities. It is recommended to use modules Crypto.Signature.PKCS1_PSS or Crypto.Signature.PKCS1_v1_5 instead.
         # https://www.dlitz.net/software/pycrypto/api/current/Crypto.PublicKey.RSA._RSAobj-class.html#verify
 
-
-        # Decrypt message container to server
-        # !Attention!: this function performs the plain, primitive RSA decryption (textbook). In real applications, you always need to use proper cryptographic padding, and you should not directly decrypt data with this method. Failure to do so may lead to security vulnerabilities. It is recommended to use modules Crypto.Cipher.PKCS1_OAEP or Crypto.Cipher.PKCS1_v1_5 instead.
-        # https://www.dlitz.net/software/pycrypto/api/current/Crypto.PublicKey.RSA._RSAobj-class.html#decrypt
-        #plainText = keys.decrypt(message)
-
         # Send to receiving client
-        self.response.write('<p>Plain-Message</p>')
-        #self.response.write('<p>' + escape(plainText) + '</p>')
 
 class UserExampleHandler(webapp2.RequestHandler):
     def get(self):
-        #h = SHA.new()
-        #h.update(b'+49 123 1234567')
-        #h.hexdigest()
+        h = SHA256.new()
+        h.update(b'+49 123 1234567')
+        h.hexdigest()
 
-        #rng = Random.new().read
-        #keys = RSA.generate(2048, rng)
-        #publicKey = keys.publickey().exportKey()
+        rng = Random.new().read
+        keys = RSA.generate(2048, rng)
+        publicKey = keys.publickey().exportKey()
         
         user = User()
         user.id = 42
-        #user.phoneHash = h.hexdigest()
+        user.phoneHash = h.hexdigest()
         user.phoneHashType = 'SHA-1'
-        #user.publicKey = publicKey
+        user.publicKey = publicKey
 
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
         self.response.write(json.dumps(user.to_dict()))
         
-class MessageExampleHandler(webapp2.RequestHandler):
-    def get(self):
-        # Client Security
-        #rng = Random.new().read
-        #clientKeys = RSA.generate(2048, rng)
-        
-        # Server PublicKey
-        #pem = open('privKey.pem', 'r')
-        #serverKeys = RSA.importKey(pem.read(), passphrase='Arcanum')
-        #pem.close()
-
-        # The message
-        msg = Message()
-        msg.sender = '123'
-        msg.recipient = '123'
-        #msg.content = db.Blob(base64.encodestring(clientKeys.encrypt('Das ist eine Beispielnachricht', 16)[0]))
-        msg.content = db.Blob(base64.encodestring(b'Das ist Text'))
-        msg.contentType = 'Text'
-
-        # Encrypt hole message with server public key
-        #msg_sec = serverKeys.publickey().encrypt(msg.to_json(), 256)[0]
-        
-        # Output
-        self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        self.response.write(msg.to_json())
-
-
 app = webapp2.WSGIApplication([
     (r'/', MainHandler),
     (r'/auth', AuthHandler),
     (r'/contacts', ContactsHandler),
     (r'/contact/(\w+)', ContactHandler),
     (r'/msg', MessageHandler),
-    (r'/authExample', UserExampleHandler),
-    (r'/msgExample', MessageExampleHandler),
 ], debug=True)
