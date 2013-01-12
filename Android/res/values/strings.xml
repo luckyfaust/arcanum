@@ -4,5 +4,7 @@
     <string name="app_name">Arcanum</string>
     <string name="btn_Send">Send</string>
     <string name="menu_settings">Settings</string>
+    <string name="menu_security">Security</string>
+    <string name="menu_load_server_key">Load server key</string>
 
 </resources>

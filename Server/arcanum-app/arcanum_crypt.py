@@ -11,10 +11,10 @@ from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Hash import SHA256
 
 class ArcanumCrypt:
-    self.rsa_key = None
+    rsa_key = None
 
     def load(self, keyFile='key.prv'):
-        f = open(keyfile, 'r')
+        f = open(keyFile, 'r')
         self.rsa_key = RSA.importKey(f.read(), passphrase='Arcanum')
         f.close()
 
@@ -33,23 +33,23 @@ class ArcanumCrypt:
         pkcs = PKCS1_OAEP.new(self.rsa_key, SHA256.new())
 
         # Init AES
-        iv = generate_iv()
-        pw = generate_pw('My secret password')
+        iv = self.generate_iv()
+        pw = self.generate_pw('My secret password')
 
         aes_key = AES.new(pw, AES.MODE_CBC, iv)
 
-        cipher = PKCS1_OAEP.new(key, SHA256.new())
+        cipher = PKCS1_OAEP.new(self.rsa_key, SHA256.new())
         ciphertext = cipher.encrypt(message)
         return ciphertext
     
     def decrypt(self, ciphertext):
         key = self.loadRSA()
-        cipher = PKCS1_OAP.new(key, SHA256.new())
+        cipher = PKCS1_OAEP.new(key, SHA256.new())
         message = cipher.decrypt(ciphertext)
         return message
 
     # http://kfalck.net/2011/03/07/decoding-pkcs1-padding-in-python
-    def pkcs1_unpad(text):
+    def pkcs1_unpad(self, text):
         if len(text) > 0 and text[0] == '\x02':
             # Find end of padding marked by nul
             pos = text.find('\x00')
@@ -57,7 +57,7 @@ class ArcanumCrypt:
                 return text[pos+1:]
         return None
 
-    def generate_pw(password, iterations=5000, readable=False):
+    def generate_pw(self, password, iterations=5000, readable=False):
         salt = Random.new().read
         key = PBKDF2(password, salt, dkLen=32, count=iterations)
  
@@ -70,10 +70,10 @@ class ArcanumCrypt:
         else:
             return key
 
-    def generate_iv(length=16):
+    def generate_iv(self, length=16):
         return ''.join(chr(random.randint(0, 0xFF)) for i in range(length))
 
-    def pad_data(data):
+    def pad_data(self, data):
         # return data if no padding is required
         if len(data) % 16 == 0:
             return data
@@ -85,7 +85,7 @@ class ArcanumCrypt:
         data = '%s%s' % (data, '\x00' * padding_required)
         return data
 
-    def unpad_data(data):
+    def unpad_data(self, data):
         if not data:
             return data
         data = data.rstrip('\x00')

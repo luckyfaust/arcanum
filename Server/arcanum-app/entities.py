@@ -5,7 +5,7 @@ import json
 # Class to enable json serialization
 class DictModel(db.Model):
     def to_dict(self):
-       return dict([(p, unicode(getattr(self, p))) for p in self.properties()])
+        return dict([(p, unicode(getattr(self, p))) for p in self.properties()])
     def to_json(self):
         return json.dumps(self.to_dict())
 #
@@ -20,12 +20,12 @@ class User(DictModel):
     created = db.DateTimeProperty(auto_now_add=True)
     modified = db.DateTimeProperty(auto_now=True)
 
-    def parse(self, dict):
-        self.phoneHash = dict.get("phoneHash")
-        self.phoneHashType = dict.get("phoneHashType")
-        self.publicKey = dict.get("publicKey")
-        self.created = dict.get("created")
-        self.modified = dict.get("modified")
+    def parse(self, dictionary):
+        self.phoneHash = dictionary.get("phoneHash")
+        self.phoneHashType = dictionary.get("phoneHashType")
+        self.publicKey = dictionary.get("publicKey")
+        self.created = dictionary.get("created")
+        self.modified = dictionary.get("modified")
 
     def isValid(self):
         if self.phoneHash is None:
@@ -51,11 +51,11 @@ class Message(DictModel):
     content = db.BlobProperty()         # Encrypted content
     contentType = db.StringProperty()   # Type of encrypted content (Text, Image, Video, etc.)
 
-    def parse(self, dict):
-        self.sender = dict.get("sender")
-        self.recipient = dict.get("recipient")
-        self.content = db.Blob(dict.get("content"))
-        self.contentType = dict.get("contentType")
+    def parse(self, dictionary):
+        self.sender = dictionary.get("sender")
+        self.recipient = dictionary.get("recipient")
+        self.content = db.Blob(dictionary.get("content"))
+        self.contentType = dictionary.get("contentType")
 
     def isValid(self):
         if self.sender is None:
