@@ -11,7 +11,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import app.arcanum.crypto.ArcanumCrypto;
-import app.arcanum.crypto.exceptions.EncryptException;
+import app.arcanum.crypto.exceptions.CryptoException;
 
 public class MainActivity extends Activity {
 	private ArcanumCrypto _arcanumCrypto;
@@ -39,14 +39,14 @@ public class MainActivity extends Activity {
 				// Crypt
 				try {
 					byte[] plaintext = txtMessage.getText().toString().getBytes(ENCODING);
-					byte[] ciphertext = _arcanumCrypto.get_rsa().encrypt(plaintext);
+					byte[] ciphertext = _arcanumCrypto.get_aes().encrypt(plaintext);
 					
 					builder
 						.setTitle("Attention")
 						.setMessage(String.format("You will send: \"%1$s\"", new String(ciphertext, ENCODING)))
 						.setPositiveButton("OK", dialogClickListener)
 					    .show();
-				} catch (EncryptException ex) {
+				} catch (CryptoException ex) {
 					builder
 						.setTitle("ERROR")
 						.setMessage(String.format("ERROR:\n%1$s", ex.getMessage()))

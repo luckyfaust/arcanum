@@ -77,7 +77,8 @@ public class RsaCrypto implements ICrypto {
 		try {
 			Cipher cipher = Cipher.getInstance(ALGORITHM_FULL);
 		    cipher.init(Cipher.ENCRYPT_MODE, key);
-		    return cipher.doFinal(plaintext);
+		    byte [] ciphertext = cipher.doFinal(plaintext);
+			return ciphertext;
 		} catch (NoSuchAlgorithmException ex) {
 			throw new EncryptException("NoSuchAlgorithmException", ex);
 		} catch (NoSuchPaddingException ex) {
@@ -96,7 +97,9 @@ public class RsaCrypto implements ICrypto {
 		try {
 			Cipher cipher = Cipher.getInstance(ALGORITHM_FULL);
 			cipher.init(Cipher.DECRYPT_MODE, _privateKey);
-			return cipher.doFinal(ciphertext);
+			
+			byte[] plaintext = cipher.doFinal(ciphertext);
+			return plaintext;
 		} catch (NoSuchAlgorithmException ex) {
 			throw new DecryptException("NoSuchAlgorithmException", ex);
 		} catch (NoSuchPaddingException ex) {
