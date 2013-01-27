@@ -44,12 +44,14 @@ class User(DictModel):
 
         isInDatastore = bool(users.count(limit=1))
         return not isInDatastore
-
+    
 class Message(DictModel):
-    sender = db.StringProperty()        # Hashed Phone Number
-    recipient = db.StringProperty()     # Hashed Phone Number
-    content = db.BlobProperty()         # Encrypted content
-    contentType = db.StringProperty()   # Type of encrypted content (Text, Image, Video, etc.)
+    sender      = db.StringProperty()
+    recipient   = db.StringProperty()
+    iv          = db.BlobProperty()
+    secretkey   = db.BlobProperty()
+    content     = db.BlobProperty()
+    contentType = db.StringProperty()
 
     def parse(self, dictionary):
         self.sender = dictionary.get("sender")
@@ -67,3 +69,6 @@ class Message(DictModel):
         if self.contentType is None:
             return False
         return True
+    
+class RawMessage(db.Model):
+    content = db.BlobProperty()

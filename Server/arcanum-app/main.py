@@ -24,10 +24,11 @@ from google.appengine.ext import db
 
 import json
 import webapp2
+import base64
 
-import entities
-User    = entities.User
-Message = entities.Message
+from entities import User
+from entities import Message
+from entities import RawMessage
 
     
 class MainHandler(webapp2.RequestHandler):
@@ -81,10 +82,21 @@ class ContactHandler(webapp2.RequestHandler):
 
 class MessageHandler(webapp2.RequestHandler):
     def post(self):
-        message = self.request.body
-        self.response.write('<p>Message</p>')
-        self.response.write('<p>' + escape(message) + '</p>')
+        msg = self.request.body
+        self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+        self.response.write('<p>Message posted:</p>')
+        self.response.write('<p>' + escape(msg) + '</p>')
 
+        raw = RawMessage()
+        raw.content = base64.standard_b64decode(msg)
+        raw.put()
+        
+        self.response.write('<p>Saved in datastore.</p>')
+        
+        # Split RawMessage to Message 
+        message = Message()
+        # ...
+        
         # Load public Key from User
         
         # Verify message
@@ -96,7 +108,7 @@ class MessageHandler(webapp2.RequestHandler):
 class UserExampleHandler(webapp2.RequestHandler):
     def get(self):
         h = SHA256.new()
-        h.update(b'+49 123 1234567')
+        h.update(b'+49 123 12 34 567')
         h.hexdigest()
 
         rng = Random.new().read
@@ -106,7 +118,7 @@ class UserExampleHandler(webapp2.RequestHandler):
         user = User()
         user.id = 42
         user.phoneHash = h.hexdigest()
-        user.phoneHashType = 'SHA-1'
+        user.phoneHashType = 'SHA-256'
         user.publicKey = publicKey
 
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'

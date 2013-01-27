@@ -40,8 +40,10 @@ public class AesCrypto implements ICrypto {
 			Cipher cipher = Cipher.getInstance(ALGORITHM_FULL);
 		    cipher.init(Cipher.ENCRYPT_MODE, key, iv);
 		    
+		    _iv 	= iv.getIV();
+		    _key 	= key.getEncoded();
 		    byte [] ciphertext = cipher.doFinal(plaintext);
-			return ciphertext;
+		    return ciphertext;
 		} catch (NoSuchAlgorithmException ex) {
 			throw new EncryptException("NoSuchAlgorithmException", ex);
 		} catch (NoSuchPaddingException ex) {
@@ -81,6 +83,22 @@ public class AesCrypto implements ICrypto {
 		} catch (BadPaddingException ex) {
 			throw new DecryptException("BadPaddingException", ex);
 		}
+	}
+	
+	public byte[] IV() {
+		return _iv;
+	}
+
+	public void setIV(byte[] _iv) {
+		this._iv = _iv;
+	}
+
+	public byte[] KEY() {
+		return _key;
+	}
+
+	public void setKey(byte[] _key) {
+		this._key = _key;
 	}
 
 	private SecretKey generate_secure_key() throws CryptoException {

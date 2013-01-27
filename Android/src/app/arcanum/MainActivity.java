@@ -6,16 +6,17 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.util.Base64;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.crypto.ArcanumCrypto;
-import app.arcanum.crypto.exceptions.CryptoException;
+import app.arcanum.crypto.exceptions.MessageProtocolException;
 
 public class MainActivity extends Activity {
 	private ArcanumCrypto _arcanumCrypto;
-	private final static Charset ENCODING = Charset.forName("UTF-8"); 
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,17 +37,21 @@ public class MainActivity extends Activity {
 					.setPositiveButton("OK", dialogClickListener)
 				    .show();
 				
-				// Crypt
 				try {
-					byte[] plaintext = txtMessage.getText().toString().getBytes(ENCODING);
-					byte[] ciphertext = _arcanumCrypto.get_aes().encrypt(plaintext);
+					ArcanumContact to 	= new ArcanumContact();
+					to.Name 			= "Test User";
+					to.RawContactID 	= 42;
+					to.Token			= "+49 175 12 34 567";
+										
+					byte[] sendBytes 	= _arcanumCrypto.create_message(to, txtMessage.getText().toString());
+					String sendString 	= Base64.encodeToString(sendBytes, Base64.DEFAULT);
 					
 					builder
 						.setTitle("Attention")
-						.setMessage(String.format("You will send: \"%1$s\"", new String(ciphertext, ENCODING)))
+						.setMessage(String.format("You will send: \"%1$s\"", sendString))
 						.setPositiveButton("OK", dialogClickListener)
 					    .show();
-				} catch (CryptoException ex) {
+				} catch (MessageProtocolException ex) {
 					builder
 						.setTitle("ERROR")
 						.setMessage(String.format("ERROR:\n%1$s", ex.getMessage()))
@@ -57,7 +62,7 @@ public class MainActivity extends Activity {
 		});
     }
 
-    @Override
+	@Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.activity_main, menu);
@@ -70,6 +75,9 @@ public class MainActivity extends Activity {
 		    case R.id.menu_load_server_key:
 		    	_arcanumCrypto.get_rsa().load_serverPublicKey();
 		        return true;
+		    case R.id.menu_contacts:
+		    	setContentView(R.layout.activity_contacts);
+		    	return true;
 		    case R.id.menu_settings:
 		        return true;
 		    default:
