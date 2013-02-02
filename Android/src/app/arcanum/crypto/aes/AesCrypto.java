@@ -14,6 +14,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import android.content.Context;
 import app.arcanum.crypto.ICrypto;
 import app.arcanum.crypto.exceptions.*;
 
@@ -27,6 +28,8 @@ public class AesCrypto implements ICrypto {
 	
 	byte[] _iv = new byte[IV_LENGTH];
 	byte[] _key = new byte[KEY_LENGTH];
+
+	public AesCrypto(final Context context) {}
 
 	@Override
 	public void init() {}

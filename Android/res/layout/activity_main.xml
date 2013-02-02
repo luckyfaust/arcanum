@@ -38,25 +38,7 @@
             android:id="@+id/listMessages"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical" >
-
-            <EditText
-                android:id="@+id/msgItem1"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ems="10"
-                android:inputType="textMultiLine"
-                android:text="Das ist die 1. Nachricht" />
-
-			<EditText
-			    android:id="@+id/msgItem2"
-			    android:layout_width="fill_parent"
-			    android:layout_height="wrap_content"
-			    android:layout_weight="1"
-			    android:ems="10"
-			    android:inputType="textMultiLine"
-			    android:text="Das ist die zweite Nachricht, haha" />
+            android:orientation="vertical" >           
 
         </LinearLayout>
     </ScrollView>

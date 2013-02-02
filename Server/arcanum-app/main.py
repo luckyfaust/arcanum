@@ -124,10 +124,25 @@ class UserExampleHandler(webapp2.RequestHandler):
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
         self.response.write(json.dumps(user.to_dict()))
         
+class CryptoHandler(webapp2.RequestHandler):
+    def get(self, size):
+        self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+        self.response.write('Generated RSA keys for an size of {0}.\n'.format(size))
+        
+        rng = Random.new().read
+        keys = RSA.generate(int(size), rng)
+        pub = keys.exportKey(format='PEM', passphrase='_ArCanuM!', pkcs=8)
+        prv = keys.publickey().exportKey(format='PEM', passphrase=None, pkcs=1)
+        
+        self.response.write(pub);
+        self.response.write('\n\n')        
+        self.response.write(prv);
+        
 app = webapp2.WSGIApplication([
     (r'/', MainHandler),
     (r'/auth', AuthHandler),
     (r'/contacts', ContactsHandler),
     (r'/contact/(\w+)', ContactHandler),
     (r'/msg', MessageHandler),
-], debug=True)
+    (r'/gen/crypto/(\d+)', CryptoHandler)
+], debug=False)

@@ -3,24 +3,23 @@ package app.arcanum.crypto;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
 
-import android.os.AsyncTask;
+import android.content.Context;
 import app.arcanum.contacts.ArcanumContact;
-import app.arcanum.crypto.protocol.MessageV1;
-import app.arcanum.crypto.rsa.*;
-import app.arcanum.crypto.aes.*;
+import app.arcanum.crypto.aes.AesCrypto;
 import app.arcanum.crypto.exceptions.CryptoException;
 import app.arcanum.crypto.exceptions.MessageProtocolException;
+import app.arcanum.crypto.protocol.MessageV1;
+import app.arcanum.crypto.rsa.RsaCrypto;
 
 public class ArcanumCrypto {
 	final Charset message_encoding = Charset.forName("UTF-8");
 	final RsaCrypto _rsa;
 	final AesCrypto _aes;
 	
-	public ArcanumCrypto() {
-		_rsa = new RsaCrypto("http://arcanum-app.appspot.com/auth");
-		_aes = new AesCrypto();
+	public ArcanumCrypto(Context context) {
+		_rsa = new RsaCrypto(context);
+		_aes = new AesCrypto(context);
 		
 		_rsa.init();
 		_aes.init();

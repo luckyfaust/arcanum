@@ -11,4 +11,8 @@
     
     <string name="title_activity_contacts">Contacts</string>
 
+    <!-- Security -->
+    <string name="sec_public_key_server"></string>
+    <string name="sec_public_key"></string>
+    <string name="sec_private_key"></string>
 </resources>
