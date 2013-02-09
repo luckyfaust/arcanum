@@ -1,82 +1,40 @@
 package app.arcanum;
 
-import android.os.Bundle;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.util.Base64;
+import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.LinearLayout.LayoutParams;
-import app.arcanum.contacts.ArcanumContact;
-import app.arcanum.crypto.ArcanumCrypto;
-import app.arcanum.crypto.exceptions.MessageProtocolException;
-import app.arcanum.tasks.HttpPostTask;
+
+import com.google.android.gcm.GCMRegistrar;
 
 public class MainActivity extends Activity {
-	private final LayoutParams msg_layout_params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-	private final LayoutParams msg_layout_params_own = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-	private ArcanumCrypto _arcanumCrypto;
+	private static final String TAG = "MainActivity";
+	private final LayoutParams process_layout_params = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+	private String regId = "";
 	
-    @Override
+	@Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // Init
-        _arcanumCrypto = new ArcanumCrypto(this);
+        // Init AppSettings
+        AppSettings.init(this);
         
-        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        msg_layout_params.setMargins(0, 0, 50, 0);
-        msg_layout_params_own.setMargins(50, 0, 0, 0);
-        
-        // Get Controls
-        final EditText txtMessage = (EditText)findViewById(R.id.txtMessage);
-        final LinearLayout listOfMessages = (LinearLayout)findViewById(R.id.listMessages);
-        final Button button = (Button) findViewById(R.id.btnSend);
-        
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-            	final String sendText = txtMessage.getText().toString();
-				final EditText myMessage = build_MessageControl(sendText, true);
-				listOfMessages.addView(myMessage);
-				
-				try {
-					ArcanumContact to 	= new ArcanumContact();
-					to.DisplayName		= "Test User";
-					to.Token			= "+49 175 12 34 567";
-					to.PhoneNumbers.add(to.Token);
-										
-					byte[] sendBytes 	= _arcanumCrypto.create_message(to, sendText);
-					String sendString 	= Base64.encodeToString(sendBytes, Base64.DEFAULT);
-					
-					builder
-						.setTitle("Attention")
-						.setMessage(String.format("You will send: \"%1$s\"", sendString))
-						.setPositiveButton("OK", dialogClickListener)
-					    .show();
-					
-					HttpPostTask task = new HttpPostTask();
-					task.execute(sendBytes);
-				} catch (MessageProtocolException ex) {
-					builder
-						.setTitle("ERROR")
-						.setMessage(String.format("ERROR:\n%1$s", ex.getMessage()))
-						.setPositiveButton("OK", dialogClickListener)
-					    .show();
-				}
-            }
-        });
-        
+        // Init App
+        registerClient();
+        registerClientAtServer();
     }
-    
-    @Override
+	
+	@Override
 	protected void onStart() {
 		super.onStart();
+		
+		Intent myIntent = new Intent(getBaseContext(), MessageActivity.class);
+        startActivity(myIntent);
 	}
 
 	@Override
@@ -87,44 +45,72 @@ public class MainActivity extends Activity {
     }
 	
 	@Override
-	public boolean onOptionsItemSelected(android.view.MenuItem item) {
-	    switch (item.getItemId()) {
-		    case R.id.menu_load_server_key:
-		    	//_arcanumCrypto.get_rsa().load_serverPublicKey();
-		        return true;
-		    case R.id.menu_contacts:
-		    	Intent myIntent = new Intent(getBaseContext(), ContactsActivity.class);
-                startActivity(myIntent);
-		    	return true;
-		    case R.id.menu_settings:
-		        return true;
-		    default:
-		        return super.onOptionsItemSelected(item);
-	    }
+	protected void onDestroy() {
+		GCMRegistrar.onDestroy(this);
+		super.onDestroy();
 	}
-	
-	private EditText build_MessageControl(final String msg, final boolean isOwnMessage) {
-		EditText txt = new EditText(this);
-		txt.setLayoutParams(isOwnMessage ? msg_layout_params_own : msg_layout_params);
-		txt.setEms(10);
-		txt.setText(msg);
-		txt.setEnabled(false);
-				
-		return txt;
-	}
-	
-	private DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
-	    @Override
-	    public void onClick(DialogInterface dialog, int which) {
-	        switch (which){
-		        case DialogInterface.BUTTON_POSITIVE:
-		            //Yes button clicked
-		            break;
-	
-		        case DialogInterface.BUTTON_NEGATIVE:
-		            //No button clicked
-		            break;
-	        }
-	    }
-	};
+
+	private void registerClient() {
+		addProcessLine(Log.INFO, "Start registration.");
+		
+		try {
+			// Check that the device supports GCM.
+			GCMRegistrar.checkDevice(this);
+			// Check the manifest permissions.
+			GCMRegistrar.checkManifest(this);
+			
+			// Get the existing registration id, if it exists.
+			regId = GCMRegistrar.getRegistrationId(this);
+			if (regId.equals("")) {
+				addProcessLine(Log.INFO, "GCM registration not found!");
+				// Do the registration
+				GCMRegistrar.register(this, AppSettings.GCM.PROJECT_ID);
+				regId = GCMRegistrar.getRegistrationId(this);
+				addProcessLine(Log.INFO, "GCM registration completed."); 
+			} else {
+				addProcessLine(Log.DEBUG, "GCM already registered.");
+			}
+		} catch (Exception ex) {
+			addProcessLine(Log.ERROR, "Error while registration GCM.", ex);
+		}
+		
+		//TODO: Remove this in the future!
+		addProcessLine(Log.INFO, "Registration id = " + regId);
+    }
+ 
+    private void registerClientAtServer() {
+    	addProcessLine(Log.INFO, "Start server registration.");
+    	//TODO: Server registration! 
+    }
+    
+    private void addProcessLine(int error, String string) {
+    	addProcessLine(error, string, null);
+    }
+    
+    private void addProcessLine(int error, String message, Throwable ex) {
+    	switch (error) {
+	    	case Log.VERBOSE:
+				Log.v(TAG, message, ex);
+				break;
+			case Log.DEBUG:
+				Log.d(TAG, message, ex);
+				break;
+			case Log.INFO:
+				Log.i(TAG, message, ex);
+				break;
+			case Log.WARN:
+				Log.w(TAG, message, ex);
+				break;
+			case Log.ERROR:
+				Log.e(TAG, message, ex);
+				break;
+		}
+    	
+		TextView line = new TextView(this);
+		line.setLayoutParams(process_layout_params);
+		line.setText(message);
+		
+		final LinearLayout listOfProcess = (LinearLayout)findViewById(R.id.mainListProcess);
+		listOfProcess.addView(line);
+    }
 }

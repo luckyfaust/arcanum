@@ -8,6 +8,21 @@
         android:minSdkVersion="9"
         android:targetSdkVersion="17" />
 
+    <!-- http://developer.android.com/google/gcm/gs.html -->
+    <permission
+        android:name="app.arcanum.permission.C2D_MESSAGE"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="app.arcanum.permission.C2D_MESSAGE" />
+
+    <!-- App receives GCM messages. -->
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+    <!-- GCM connects to Google Services. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- GCM requires a Google account. -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <!-- Keeps the processor from sleeping when a message is received. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
@@ -28,6 +43,26 @@
         <activity
             android:name="app.arcanum.ContactsActivity"
             android:label="@string/title_activity_contacts" >
+        </activity>
+
+        <!-- For GCM -->
+        <receiver
+            android:name="com.google.android.gcm.GCMBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <action android:name="com.google.android.c2dm.intent.REGISTRATION" />
+
+                <category android:name="app.arcanum" />
+            </intent-filter>
+        </receiver>
+
+        <service android:name="app.arcanum.GCMIntentService" />
+
+        <activity
+            android:name="app.arcanum.MessageActivity"
+            android:label="@string/title_activity_message"
+            android:windowSoftInputMode="adjustResize|stateVisible" >
         </activity>
     </application>
 

@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+'''
 from Crypto import Random
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
+'''
 
 from cgi import escape
 from google.appengine.ext import db
@@ -27,6 +28,7 @@ import webapp2
 import base64
 
 from entities import User
+from entities import RawUser
 from entities import Message
 from entities import RawMessage
 
@@ -65,12 +67,29 @@ class AuthHandler(webapp2.RequestHandler):
             self.response.write('Failed!\n')
             self.response.write(e)
 
+def as_user(dct):
+    raw = RawUser()
+    raw.parse(dct)
+    return raw
+            
 class ContactsHandler(webapp2.RequestHandler):
-    def get(self):
-        users = User.all()
-        
+    def post(self):
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        self.response.write(json.dumps([u.to_dict() for u in users]))        
+        
+        counter = 0
+        userlist = json.loads(self.request.body, object_hook=as_user)        
+        
+        self.response.write('[')
+        for u in userlist:
+            for p in u.phones:
+                usr = User.all().filter('phoneHash=', p).get()
+                if usr is not None:
+                    if counter > 0:
+                        self.response.write(',')
+                    self.response.write(usr.to_json())
+                    counter += 1
+        
+        self.response.write(']')
 
 class ContactHandler(webapp2.RequestHandler):
     def get(self, phoneHash):
@@ -104,31 +123,12 @@ class MessageHandler(webapp2.RequestHandler):
         # https://www.dlitz.net/software/pycrypto/api/current/Crypto.PublicKey.RSA._RSAobj-class.html#verify
 
         # Send to receiving client
-
-class UserExampleHandler(webapp2.RequestHandler):
-    def get(self):
-        h = SHA256.new()
-        h.update(b'+49 123 12 34 567')
-        h.hexdigest()
-
-        rng = Random.new().read
-        keys = RSA.generate(2048, rng)
-        publicKey = keys.publickey().exportKey()
-        
-        user = User()
-        user.id = 42
-        user.phoneHash = h.hexdigest()
-        user.phoneHashType = 'SHA-256'
-        user.publicKey = publicKey
-
-        self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        self.response.write(json.dumps(user.to_dict()))
         
 class CryptoHandler(webapp2.RequestHandler):
     def get(self, size):
         self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
         self.response.write('Generated RSA keys for an size of {0}.\n'.format(size))
-        
+        '''
         rng = Random.new().read
         keys = RSA.generate(int(size), rng)
         pub = keys.exportKey(format='PEM', passphrase='_ArCanuM!', pkcs=8)
@@ -137,7 +137,7 @@ class CryptoHandler(webapp2.RequestHandler):
         self.response.write(pub);
         self.response.write('\n\n')        
         self.response.write(prv);
-        
+        '''
 app = webapp2.WSGIApplication([
     (r'/', MainHandler),
     (r'/auth', AuthHandler),
@@ -145,4 +145,4 @@ app = webapp2.WSGIApplication([
     (r'/contact/(\w+)', ContactHandler),
     (r'/msg', MessageHandler),
     (r'/gen/crypto/(\d+)', CryptoHandler)
-], debug=False)
+], debug=True)

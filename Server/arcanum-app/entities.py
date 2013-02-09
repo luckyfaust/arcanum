@@ -8,29 +8,33 @@ class DictModel(db.Model):
         return dict([(p, unicode(getattr(self, p))) for p in self.properties()])
     def to_json(self):
         return json.dumps(self.to_dict())
-#
-# Defines a user in database
-#
-# Help:
-#   https://developers.google.com/appengine/docs/python/datastore/typesandpropertyclasses
+
+class RawUser(DictModel):
+    lookup_key  = db.StringProperty()
+    phones      = db.StringListProperty()
+    
+    def parse(self, dct):
+        self.lookup_key = dct.get("lookup_key")
+        self.phones     = dct.get("phones")
+
 class User(DictModel):
     phoneHash = db.StringProperty()                 # Hashed Phone Number
-    phoneHashType = db.StringProperty()             # https://www.dlitz.net/software/pycrypto/api/current/Crypto.Hash-module.html
+    phoneType = db.StringProperty()                 # Phone type (Android, iOS, Win8, ...)
     publicKey = db.StringProperty(multiline=True)   # Public Key (PEM-Format)
     created = db.DateTimeProperty(auto_now_add=True)
     modified = db.DateTimeProperty(auto_now=True)
 
     def parse(self, dictionary):
         self.phoneHash = dictionary.get("phoneHash")
-        self.phoneHashType = dictionary.get("phoneHashType")
         self.publicKey = dictionary.get("publicKey")
+        self.phoneType = dictionary.get("phoneType")
         self.created = dictionary.get("created")
         self.modified = dictionary.get("modified")
 
     def isValid(self):
         if self.phoneHash is None:
             return False
-        if self.phoneHashType is None:
+        if self.phoneType is None:
             return False
         if self.publicKey is None:
             return False
@@ -39,7 +43,7 @@ class User(DictModel):
     def isUnique(self):
         users = User.all()
         users.filter("phoneHash = ", self.phoneHash)
-        users.filter("phoneHashType = ", self.phoneHashType)
+        users.filter("phoneType = ", self.phoneType)
         users.filter("publicKey = ", self.publicKey)
 
         isInDatastore = bool(users.count(limit=1))

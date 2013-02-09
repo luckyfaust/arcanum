@@ -4,43 +4,25 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity" >
 	
-	<EditText
-	    android:id="@+id/txtMessage"
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:layout_alignParentBottom="true"
-	    android:layout_alignParentLeft="true"
-	    android:ems="10"
-	    android:inputType="text" >
-
-        <requestFocus />
-    </EditText>
-    
-    <Button
-        android:id="@+id/btnSend"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:text="@string/btn_Send"
-        android:layout_alignTop="@+id/txtMessage"
-        android:layout_toRightOf="@+id/txtMessage"/>
-
-    <ScrollView
-        android:id="@+id/scrollMessages"
+	<ScrollView
+        android:id="@+id/mainScrollProcess"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_above="@+id/txtMessage"
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true" >
 
         <LinearLayout
-            android:id="@+id/listMessages"
+            android:id="@+id/mainListProcess"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical" >           
-
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+            
+            <ProgressBar
+                android:id="@+id/mainProgressProcess"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+            
         </LinearLayout>
     </ScrollView>
-
 </RelativeLayout>
