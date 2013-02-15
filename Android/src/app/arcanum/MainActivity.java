@@ -5,15 +5,18 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.LinearLayout.LayoutParams;
+
+import app.arcanum.contracts.RegisterRequest;
+import app.arcanum.tasks.HttpSendRegisterTask;
 
 import com.google.android.gcm.GCMRegistrar;
 
 public class MainActivity extends Activity {
 	private static final String TAG = "MainActivity";
-	private final LayoutParams process_layout_params = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+	private final LayoutParams msg_layout_params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
 	private String regId = "";
 	
 	@Override
@@ -21,12 +24,17 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
+        
         // Init AppSettings
         AppSettings.init(this);
         
-        // Init App
-        registerClient();
-        registerClientAtServer();
+        try {
+        	// Init App
+        	registerClient();
+        	registerClientAtServer();
+		} catch (InterruptedException ex) {
+			Log.wtf(TAG, "Fatal error while register the current client.", ex);
+		}
     }
 	
 	@Override
@@ -76,11 +84,23 @@ public class MainActivity extends Activity {
 		
 		//TODO: Remove this in the future!
 		addProcessLine(Log.INFO, "Registration id = " + regId);
+		AppSettings.GCM.REGISTRATION_ID = regId;
     }
  
-    private void registerClientAtServer() {
+    private void registerClientAtServer() throws InterruptedException {
     	addProcessLine(Log.INFO, "Start server registration.");
-    	//TODO: Server registration! 
+    	/*
+    	addProcessLine(Log.INFO, "Waiting for key generation.");
+    	if(!AppSettings.getCrypto().RSA.isReady())
+    		AppSettings.getCrypto().RSA.waitForReady();
+    	*/
+    	addProcessLine(Log.DEBUG, "Creating RegisterRequest.");
+    	RegisterRequest req = new RegisterRequest(this);
+    	addProcessLine(Log.DEBUG, "RegisterRequest creation finished.");
+    	
+    	addProcessLine(Log.INFO, "Sending registration to server.");
+    	HttpSendRegisterTask task = new HttpSendRegisterTask();
+    	task.execute(req);
     }
     
     private void addProcessLine(int error, String string) {
@@ -106,9 +126,11 @@ public class MainActivity extends Activity {
 				break;
 		}
     	
-		TextView line = new TextView(this);
-		line.setLayoutParams(process_layout_params);
+		final EditText line = new EditText(this);
+		line.setLayoutParams(msg_layout_params);
+		line.setEms(10);
 		line.setText(message);
+		line.setEnabled(false);
 		
 		final LinearLayout listOfProcess = (LinearLayout)findViewById(R.id.mainListProcess);
 		listOfProcess.addView(line);

@@ -35,6 +35,12 @@ public class AesCrypto implements ICrypto {
 	public void init() {}
 	
 	@Override
+	public boolean isReady() { return true; }
+
+	@Override
+	public void waitForReady() {}
+	
+	@Override
 	public byte[] encrypt(byte[] plaintext) throws CryptoException, EncryptException  {
 		try {
 			SecretKey key = generate_secure_key();

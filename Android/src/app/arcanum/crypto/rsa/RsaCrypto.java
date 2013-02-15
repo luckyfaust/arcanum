@@ -32,6 +32,7 @@ import org.apache.http.util.EntityUtils;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.os.AsyncTask.Status;
 import android.util.Base64;
 import android.util.Log;
 import app.arcanum.AppSettings;
@@ -40,6 +41,8 @@ import app.arcanum.crypto.exceptions.DecryptException;
 import app.arcanum.crypto.exceptions.EncryptException;
 
 public class RsaCrypto implements ICrypto {
+	private final static String TAG = "RsaCrypto";
+	
 	final static String ALGORITHM = "RSA";
 	final static String ALGORITHM_FULL = "RSA/NONE/PKCS1Padding";
 	final static String PREF_RSA_PUBLIC_KEY = "ARCANUM_RSA_PUBLICKEY";
@@ -53,6 +56,9 @@ public class RsaCrypto implements ICrypto {
 	private PrivateKey _privateKey;
 	private final Context _context;
 
+	private AsyncTask<Void, Void, PublicKey> 	_taskServer;
+	private AsyncTask<Void, Void, KeyPair> 		_taskGeneration;
+
 	public RsaCrypto(final Context context) {
 		_context = context;
 	}
@@ -65,6 +71,64 @@ public class RsaCrypto implements ICrypto {
 		} catch(Exception ex) {
 			Log.e("FATAL", "RSA init failed!", ex);
 		}		
+	}
+
+	@Override
+	public boolean isReady() {
+		return _taskServer != null && _taskGeneration != null 
+			&& _taskServer.getStatus() != Status.FINISHED			
+			&& _taskGeneration.getStatus() != Status.FINISHED;
+	}
+	
+	@Override
+	public void waitForReady() {
+		try {
+			if(_taskServer.getStatus() != Status.FINISHED)
+				_taskServer.get();
+			
+			if(_taskGeneration.getStatus() != Status.FINISHED)
+				_taskGeneration.get();
+		} catch(Exception ex) {
+			Log.e(TAG, "Unknown error while waiting for tasks!", ex);
+		}
+	}
+		
+	public String getPublicKey() {
+		try {
+			if(_publicKey != null)
+				return getPublicKey(_publicKey);
+			
+			KeyPair pair = _taskGeneration.get();
+			return getPublicKey(pair.getPublic());
+		} catch(Exception ex) {
+			Log.e(TAG, "Unknown error getting public server key!", ex);
+		}
+		return null;		
+	}
+	
+	public String getPublicKeyServer() {
+		try {
+			PublicKey key;
+			if(_serverPublicKey != null)
+				key = _serverPublicKey;
+			else
+				key = _taskServer.get();
+			
+			return getPublicKey(key);
+		} catch(Exception ex) {
+			Log.e(TAG, "Unknown error getting public server key!", ex);
+		}
+		return null;
+	}
+	
+	private String getPublicKey(PublicKey key) {
+		if(key == null)
+			return null;
+		
+		return String.format("%s\n%s\n%s", 
+				"-----BEGIN PUBLIC KEY-----", 
+				Base64.encodeToString(key.getEncoded(), Base64.DEFAULT), 
+				"-----END PUBLIC KEY-----");
 	}
 	
 	@Override
@@ -117,11 +181,11 @@ public class RsaCrypto implements ICrypto {
 	}
 	
 	public void load_serverPublicKey() {
-		new LoadServerPublickeyTask().execute();
+		_taskServer = new LoadServerPublickeyTask().execute();
 	}
 	
 	public void load_secretKeys() {
-		new GenerateKeysTask().execute();
+		_taskGeneration = new GenerateKeysTask().execute();	
 	}
 	
 	public static PublicKey parsePublicKey(String publicKey) {
@@ -137,7 +201,7 @@ public class RsaCrypto implements ICrypto {
 			KeyFactory kf = KeyFactory.getInstance("RSA");
 			return kf.generatePublic(spec);
 		} catch (GeneralSecurityException ex) {
-			Log.e("parsePublicKey", "Parsing public key failed!", ex);
+			Log.e(TAG, "Parsing public key failed!", ex);
 		}
 		return null;
 	}
@@ -160,7 +224,7 @@ public class RsaCrypto implements ICrypto {
 				keypair = gen.generateKeyPair();
 				return keypair;
 			} catch (Exception ex) {
-				Log.e("GenerateKeysTask", String.format("Error while generating RSA Keypair with params: %s, %s.", params[0], params[1]), ex);
+				Log.e(TAG, String.format("Error while generating RSA Keypair with params: %s, %s.", params[0], params[1]), ex);
 			}
 			return null;
 		}
@@ -187,7 +251,7 @@ public class RsaCrypto implements ICrypto {
 				PrivateKey 	prvkey = fact.generatePrivate(new RSAPrivateKeySpec(prv.Modulus, prv.Exponent));
 				return new KeyPair(pubkey, prvkey);
 	        } catch (Exception ex) {
-	            Log.e("LoadKeyPair", "Error while loading rsa keypair", ex);
+	            Log.e(TAG, "Error while loading rsa keypair", ex);
 	        }
 			return null;	
 		}
@@ -216,7 +280,7 @@ public class RsaCrypto implements ICrypto {
 				SaveKey(PREF_RSA_PUBLIC_KEY, pub.getModulus(), pub.getPublicExponent());
 				SaveKey(PREF_RSA_PRIVATE_KEY, priv.getModulus(), priv.getPrivateExponent());				
 	        } catch (Exception ex) {
-	        	Log.e("SaveKeyPair", "Error while saving rsa keypair.", ex);
+	        	Log.e(TAG, "Error while saving rsa keypair.", ex);
 	        }
 		}
 		
@@ -270,7 +334,7 @@ public class RsaCrypto implements ICrypto {
 			        return RsaCrypto.parsePublicKey(response);
 			    }
 			} catch (Exception ex) {
-			    Log.e("LoadServerPublickeyTask", "Unknown error while getting the public key", ex);
+			    Log.e(TAG, "Unknown error while getting the public key", ex);
 			}	
 			return null;
 		}
@@ -291,7 +355,7 @@ public class RsaCrypto implements ICrypto {
 		
 		private void SavePublicKey(PublicKey pubkey) {
 			String b64_pubkey = Base64.encodeToString(pubkey.getEncoded(), Base64.DEFAULT);
-			_pref.edit().putString(PREF_RSA_SERVER_PUBKEY, b64_pubkey);
+			_pref.edit().putString(PREF_RSA_SERVER_PUBKEY, b64_pubkey).commit();
 		}
 	}
 }

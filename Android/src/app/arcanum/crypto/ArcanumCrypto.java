@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import android.content.Context;
+import app.arcanum.AppSettings;
 import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.crypto.aes.AesCrypto;
 import app.arcanum.crypto.exceptions.CryptoException;
@@ -14,23 +15,15 @@ import app.arcanum.crypto.rsa.RsaCrypto;
 
 public class ArcanumCrypto {
 	final Charset message_encoding = Charset.forName("UTF-8");
-	final RsaCrypto _rsa;
-	final AesCrypto _aes;
+	public final RsaCrypto RSA;
+	public final AesCrypto AES;
 	
 	public ArcanumCrypto(Context context) {
-		_rsa = new RsaCrypto(context);
-		_aes = new AesCrypto(context);
+		RSA = new RsaCrypto(context);
+		AES = new AesCrypto(context);
 		
-		_rsa.init();
-		_aes.init();
-	}
-	
-	public RsaCrypto get_rsa() {
-		return _rsa;
-	}
-
-	public AesCrypto get_aes() {
-		return _aes;
+		RSA.init();
+		AES.init();
 	}
 	
 	public byte[] create_message(ArcanumContact to, String msg) throws MessageProtocolException {
@@ -43,14 +36,13 @@ public class ArcanumCrypto {
 				case 1:
 				default:
 					MessageV1 message = new MessageV1();
-					//TODO: Get my own contact.
-					message.From = hash("+49 700 12 34 567", version);
+					message.From = hash(AppSettings.getPhoneNumber(), version);
 					message.To = hash(to.Token, version);
 					
 					// Encrypt message.
-					message.Content = _aes.encrypt(msg.getBytes(message_encoding));
-					message.IV 		= _aes.IV();
-					message.Key		= _aes.KEY();
+					message.Content = AES.encrypt(msg.getBytes(message_encoding));
+					message.IV 		= AES.IV();
+					message.Key		= AES.KEY();
 					
 					return message.toBytes();
 			}
