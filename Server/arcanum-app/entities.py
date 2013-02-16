@@ -18,36 +18,49 @@ class RawUser(DictModel):
         self.phones     = dct.get("phones")
 
 class User(DictModel):
-    phoneHash = db.StringProperty()                 # Hashed Phone Number
-    phoneType = db.StringProperty()                 # Phone type (Android, iOS, Win8, ...)
-    publicKey = db.StringProperty(multiline=True)   # Public Key (PEM-Format)
+    hash = db.StringProperty()                          # Hashed Phone Number
+    type = db.StringProperty()                          # Phone type (Android, iOS, Win8, ...)
+    public_key = db.TextProperty()                      # Public Key (PEM-Format)
+    registration_ids = db.StringListProperty()          # IDs for Push Notifications
     created = db.DateTimeProperty(auto_now_add=True)
     modified = db.DateTimeProperty(auto_now=True)
 
     def parse(self, dictionary):
-        self.phoneHash = dictionary.get("phoneHash")
-        self.publicKey = dictionary.get("publicKey")
-        self.phoneType = dictionary.get("phoneType")
+        self.hash = dictionary.get("hash")
+        self.type = dictionary.get("type")
+        self.public_key = dictionary.get("public_key")
+        self.registration_ids = dictionary.get("registration_ids")
         self.created = dictionary.get("created")
         self.modified = dictionary.get("modified")
 
     def isValid(self):
-        if self.phoneHash is None:
+        if self.hash is None:
             return False
-        if self.phoneType is None:
+        if self.type is None:
             return False
-        if self.publicKey is None:
+        if self.public_key is None:
+            return False
+        if self.registration_ids is None:
             return False
         return True
 
     def isUnique(self):
         users = User.all()
-        users.filter("phoneHash = ", self.phoneHash)
-        users.filter("phoneType = ", self.phoneType)
-        users.filter("publicKey = ", self.publicKey)
+        users.filter("hash = ", self.hash)
+        users.filter("type = ", self.type)
 
         isInDatastore = bool(users.count(limit=1))
         return not isInDatastore
+    
+    def loadme(self):
+        users = User.all()
+        users.filter("hash = ", self.hash)
+        users.filter("type = ", self.type)
+        
+        return users.get()
+
+class RawMessage(db.Model):
+    content = db.BlobProperty()        
     
 class Message(DictModel):
     sender      = db.StringProperty()
@@ -56,6 +69,7 @@ class Message(DictModel):
     secretkey   = db.BlobProperty()
     content     = db.BlobProperty()
     contentType = db.StringProperty()
+    raw = db.Reference(reference_class=RawMessage)
 
     def parse(self, dictionary):
         self.sender = dictionary.get("sender")
@@ -74,5 +88,3 @@ class Message(DictModel):
             return False
         return True
     
-class RawMessage(db.Model):
-    content = db.BlobProperty()

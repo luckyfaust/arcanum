@@ -22,6 +22,7 @@ from Crypto.PublicKey import RSA
 
 from cgi import escape
 from google.appengine.ext import db
+from struct import *
 
 import json
 import webapp2
@@ -57,12 +58,28 @@ class AuthHandler(webapp2.RequestHandler):
         try:
             jsonUser = json.loads(self.request.body)  
             user.parse(jsonUser)
-            if user.isValid() and user.isUnique():
-                user.put()  # Save user in db!
-                self.response.write('Success!')
+            if user.isValid():
+                if user.isUnique():
+                    user.put()  # Save user in db!
+                    self.response.write('You are created!\n')
+                else:
+                    self.response.write('We know you already.\n')
+                    # Trying to add notification ids.
+                    loaded_user = user.loadme()
+                    loaded_user_changed = False
+                    for reg_id in user.registration_ids:
+                        if reg_id not in loaded_user.registration_ids:
+                            loaded_user.registration_ids.append(reg_id)
+                            loaded_user_changed = True
+                    if loaded_user_changed:
+                        loaded_user.put()
+                        self.response.write('We updated your person.\n')
+                self.response.write('Success!\n')
             else:
                 self.response.write('Failed!\n')
-                self.response.write('User not valid or not unique.\n')
+                self.response.write('User not valid.\n')
+                self.response.write(user.hash)
+                self.response.write(user.type)
         except Exception, e:
             self.response.write('Failed!\n')
             self.response.write(e)
@@ -113,7 +130,20 @@ class MessageHandler(webapp2.RequestHandler):
         self.response.write('<p>Saved in datastore.</p>')
         
         # Split RawMessage to Message 
-        message = Message()
+        msg_version = Struct.unpack('>i', raw.content[0:3])
+        self.response.write('Message version is ' + msg_version)
+        
+        if msg_version == 1:
+            message = Message()
+            message.sender      = base64.standard_b64encode(raw.content[4:4+31])
+            message.recipient   = base64.standard_b64encode(raw.content[36:36+31])
+            message.iv          = raw.content[68:68+15]
+            message.secretkey   = raw.content[84:84+31]
+            #message.content_length = raw.content[116:116+3]
+            message.content     = raw.content[120:]
+            message.put()
+        else:
+            self.error(404)
         # ...
         
         # Load public Key from User
