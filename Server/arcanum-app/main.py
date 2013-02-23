@@ -20,18 +20,19 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 '''
 
-from cgi import escape
-from google.appengine.ext import db
-from struct import *
-
 import json
 import webapp2
 import base64
+
+from cgi import escape
+from struct import unpack
 
 from entities import User
 from entities import RawUser
 from entities import Message
 from entities import RawMessage
+
+from google.appengine.api import taskqueue
 
     
 class MainHandler(webapp2.RequestHandler):
@@ -119,29 +120,33 @@ class ContactHandler(webapp2.RequestHandler):
 class MessageHandler(webapp2.RequestHandler):
     def post(self):
         msg = self.request.body
-        self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
-        self.response.write('<p>Message posted:</p>')
-        self.response.write('<p>' + escape(msg) + '</p>')
+        self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        self.response.write('<p>Message posted:</p>\n')
+        self.response.write('<p>' + escape(msg) + '</p>\n')
 
         raw = RawMessage()
         raw.content = base64.standard_b64decode(msg)
         raw.put()
+        self.response.write('<p>Saved raw message in datastore.</p>\n')
         
-        self.response.write('<p>Saved in datastore.</p>')
         
         # Split RawMessage to Message 
-        msg_version = Struct.unpack('>i', raw.content[0:3])
-        self.response.write('Message version is ' + msg_version)
+        msg_version = unpack(">I", raw.content[0:4])[0]
+        self.response.write('<p>Message version is ' + str(msg_version) + '</p>\n')
         
         if msg_version == 1:
             message = Message()
-            message.sender      = base64.standard_b64encode(raw.content[4:4+31])
-            message.recipient   = base64.standard_b64encode(raw.content[36:36+31])
-            message.iv          = raw.content[68:68+15]
-            message.secretkey   = raw.content[84:84+31]
-            #message.content_length = raw.content[116:116+3]
+            message.sender      = base64.standard_b64encode(raw.content[4:4+32])
+            message.recipient   = base64.standard_b64encode(raw.content[36:36+32])
+            message.iv          = raw.content[68:68+16]
+            message.secretkey   = raw.content[84:84+32]
+            #message.content_length = raw.content[116:116+4]
             message.content     = raw.content[120:]
             message.put()
+            
+            taskqueue.add(queue_name='notifications', 
+                          url='/task/msg', 
+                          params={'key': message.key()})
         else:
             self.error(404)
         # ...

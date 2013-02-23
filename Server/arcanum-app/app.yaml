@@ -9,6 +9,13 @@ handlers:
   static_files: favicon.ico
   upload: favicon\.ico
 
+- url: /task/admin/.*
+  script: task.app
+  login: admin
+  
+- url: /task/.*
+  script: task.app
+
 - url: .*
   script: main.app
 

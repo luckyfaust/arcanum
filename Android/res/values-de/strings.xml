@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Arcanum</string>
+    
+    <string name="btn_Send">Senden</string>
+    
+    <string name="menu_load_server_key">Schlüssel des Servers laden</string>
+    <string name="menu_contacts">Kontakte</string>
+    <string name="menu_contacts_sync">Synchronisieren</string>
+    <string name="menu_settings">Einstellungen</string>
+    
+    <string name="title_activity_contacts">Kontakte</string>
+    
+    <string name="notfiy_new_message">Neue Nachricht!</string>
+    <string name="notfiy_new_message_detail">Neue Nachricht von %1.</string>
+</resources>

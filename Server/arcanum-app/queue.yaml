@@ -1,0 +1,9 @@
+total_storage_limit: 120M
+queue:
+- name: notifications
+  mode: push
+  rate: 100/s
+  retry_parameters:
+    task_retry_limit: 7
+    task_age_limit: 3d
+    min_backoff_seconds: 60

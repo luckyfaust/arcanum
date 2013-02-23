@@ -55,8 +55,8 @@ class User(DictModel):
     def loadme(self):
         users = User.all()
         users.filter("hash = ", self.hash)
-        users.filter("type = ", self.type)
-        
+        if self.type is not None:
+            users.filter("type = ", self.type)
         return users.get()
 
 class RawMessage(db.Model):
