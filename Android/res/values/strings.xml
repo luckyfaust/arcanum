@@ -11,5 +11,8 @@
     <string name="title_activity_contacts">Contacts</string>
     
     <string name="notfiy_new_message">New message!</string>
-    <string name="notfiy_new_message_detail">New message from %1.</string>
+    <string name="notfiy_new_message_detail">New message from %1$s.</string>
+    
+    <string name="toast_msg_send_success">Message send with %1$d bytes.</string>
+    <string name="toast_msg_send_failed">Message sending failed!</string>
 </resources>

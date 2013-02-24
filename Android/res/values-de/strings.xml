@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Arcanum</string>
-    
+    <string name="app_name">Arcanum</string>    
     <string name="btn_Send">Senden</string>
     
     <string name="menu_load_server_key">Schlüssel des Servers laden</string>
@@ -13,4 +12,7 @@
     
     <string name="notfiy_new_message">Neue Nachricht!</string>
     <string name="notfiy_new_message_detail">Neue Nachricht von %1.</string>
+        
+    <string name="toast_msg_send_success">Nachricht (%1$d Bytes) gesendet.</string>
+    <string name="toast_msg_send_failed">Senden der Nachricht fehlgeschlagen!</string>
 </resources>
