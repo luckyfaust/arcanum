@@ -18,7 +18,14 @@ import android.util.Log;
 import app.arcanum.AppSettings;
 
 public class HttpSendMessageTask extends AsyncTask<byte[], String, String> {
-    @Override
+	protected ITaskCallbackable _callback;
+	
+	public HttpSendMessageTask setCallback(ITaskCallbackable callback) {
+		_callback = callback;
+		return this;
+	}
+	
+	@Override
     protected String doInBackground(byte[]... params) {
         byte[] result = null;
         String str = "";
@@ -52,10 +59,28 @@ public class HttpSendMessageTask extends AsyncTask<byte[], String, String> {
 	            str = new String(result, "UTF-8");
 	        }
         } catch (ClientProtocolException ex) {
-        	Log.e("HttpPostTask", "ClientProtocolException", ex);
+        	final String message = "ClientProtocolException";
+        	Log.e("HttpPostTask", message, ex);
+        	TrySendErrorCallback(message, ex);
 		} catch (IOException ex) {
-			Log.e("HttpPostTask", "IOException", ex);
+			final String message = "IOException";
+			Log.e("HttpPostTask", message, ex);
+			TrySendErrorCallback(message, ex);
 		}
         return str;
     }
+
+	@Override
+	protected void onPostExecute(String result) {
+		super.onPostExecute(result);
+		if(_callback == null)
+			return;
+		_callback.PostExecuteCalled();
+	}
+	
+	private void TrySendErrorCallback(String message, Throwable ex) {
+		if(_callback == null)
+			return;
+		_callback.ErrorOccurred(message, ex);
+	}
 }

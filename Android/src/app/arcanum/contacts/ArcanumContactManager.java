@@ -2,6 +2,7 @@ package app.arcanum.contacts;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
@@ -17,9 +18,9 @@ import android.provider.ContactsContract.RawContacts;
 import android.util.Base64;
 import android.util.Log;
 import app.arcanum.AppSettings;
-import app.arcanum.contracts.ServerContactRequest;
-import app.arcanum.contracts.ServerContactResponse;
 import app.arcanum.tasks.HttpSendContactsTask;
+import app.arcanum.tasks.contracts.ServerContactRequest;
+import app.arcanum.tasks.contracts.ServerContactResponse;
 
 public class ArcanumContactManager {
 	public final static String ACCOUNT_TYPE = AppSettings.APP_NAME + ".contact";
@@ -50,7 +51,7 @@ public class ArcanumContactManager {
 	}
 	
 	private ArrayList<ServerContactRequest> getAll_asRequest() {
-		ArrayList<ServerContactRequest> result = new ArrayList<ServerContactRequest>();
+		HashMap<String, ServerContactRequest> result = new HashMap<String, ServerContactRequest>();
 		
 		Cursor phones = _resolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, new String[] {
 			ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY,
@@ -64,17 +65,61 @@ public class ArcanumContactManager {
 			final String key 			= phones.getString(index_key);
 			final String phoneNumber 	= phones.getString(index_phone);
 			
-			ServerContactRequest contact = new ServerContactRequest();
-			contact.LookupKey = key;
+			ServerContactRequest contact;
+			if(result.containsKey(key)) {
+				contact = result.remove(key);
+			} else {
+				contact = new ServerContactRequest();
+				contact.LookupKey = key;
+			}
+				
 			contact.addPhone(phoneNumber);
-			result.add(contact);		  	
+			result.put(key, contact);	
 		}
-		phones.close();		
-		return result;
+		phones.close();
+		
+		return new ArrayList<ServerContactRequest>(result.values());
 	}
 	
-	public ArrayList<ArcanumContact> getAll() {
-		ArrayList<ArcanumContact> result = new ArrayList<ArcanumContact>();
+	public ArcanumContactCollection getAll() {
+		//TODO: ArcanumContactManager.getAll()
+		HashMap<String, ArcanumContact> result = new HashMap<String, ArcanumContact>();
+		
+		Cursor phones = _resolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, new String[] {
+				ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY,
+				ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+				ContactsContract.CommonDataKinds.Phone.NUMBER
+			}, null, null, ContactsContract.Contacts.DISPLAY_NAME + " COLLATE LOCALIZED ASC");
+		
+		final int index_key 	= phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY);
+		final int index_display	= phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
+		final int index_phone 	= phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);	
+		
+		while (phones.moveToNext()) {			
+			final String key 			= phones.getString(index_key);
+			final String display		= phones.getString(index_display);
+			final String phoneNumber 	= phones.getString(index_phone);
+			
+			ArcanumContact contact;
+			if(result.containsKey(key)) {
+				contact = result.remove(key);
+			} else {
+				contact = new ArcanumContact();
+				contact.LookupKey 	= key;
+				contact.DisplayName = display;
+			}
+			
+			contact.PhoneNumbers.add(phoneNumber);
+			result.put(key, contact);	
+		}
+		phones.close();
+		
+		return new ArcanumContactCollection(result.values());
+	}
+	
+	public ArcanumContactCollection getByHash(String phone) {
+		//TODO: TODO: ArcanumContactManager.getByHash(String)
+		ArcanumContactCollection result = new ArcanumContactCollection();
 		return result;
 	}
 	
@@ -86,7 +131,7 @@ public class ArcanumContactManager {
 		ops.add(ContentProviderOperation.newInsert(RawContacts.CONTENT_URI)
 			.withValue(RawContacts.ACCOUNT_TYPE, ArcanumContactManager.ACCOUNT_TYPE)
 			.withValue(RawContacts.ACCOUNT_NAME, contact.AccName)
-			.withValue(RawContacts.RAW_CONTACT_IS_READ_ONLY, "1")
+			//.withValue(RawContacts.RAW_CONTACT_IS_READ_ONLY, "1")
 			.build());
 		
 		String decodedPublicKey = Base64.encodeToString(contact.Pubkey.getEncoded(), Base64.DEFAULT); 
@@ -118,4 +163,6 @@ public class ArcanumContactManager {
 		photo.close();
 		return result;
 	}
+
+	
 }

@@ -3,7 +3,7 @@ package app.arcanum.helper;
 import android.content.Context;
 import android.widget.Toast;
 
-public class ToastHelper {
+public class ToastUtils {
 	public static void showShort(Context context, String text) {
 		Toast toast = Toast.makeText(context, text, Toast.LENGTH_SHORT);
 		toast.show();

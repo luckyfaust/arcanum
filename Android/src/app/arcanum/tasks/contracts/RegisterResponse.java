@@ -1,4 +1,4 @@
-package app.arcanum.contracts;
+package app.arcanum.tasks.contracts;
 
 public class RegisterResponse {
 	public int 		HttpStatusCode;

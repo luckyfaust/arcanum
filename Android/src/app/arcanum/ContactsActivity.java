@@ -1,38 +1,51 @@
 package app.arcanum;
 
+import java.util.ArrayList;
+
 import android.os.Bundle;
 import android.app.Activity;
+import android.content.Intent;
 import android.view.Menu;
+import android.view.View;
 import android.widget.*;
-import android.widget.LinearLayout.LayoutParams;
+import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.contacts.ArcanumContactManager;
-import app.arcanum.contacts.PossibleContact;
+import app.arcanum.ui.adapters.ArcanumContactAdapter;
 
 public class ContactsActivity extends Activity {
-	private ArcanumContactManager _manager;
+	private ListView _contactsView;	
 	
-	private final LayoutParams contract_layout_params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-	private final LayoutParams contract_image_params = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-	private final LayoutParams contract_txt_params = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
-
+	private ArcanumContactManager _manager;
+	private ArcanumContactAdapter _contactsAdapter;
+	private ArrayList<ArcanumContact> _contacts;
+		
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_contacts);
 		
-		// Init Helpers
-		_manager = new ArcanumContactManager(this.getContentResolver());
+		if(!AppSettings.isInitialized)
+			AppSettings.init(this);
+		_manager = AppSettings.getContactManager();
+			
+		// Initialize contacts
+		ContactClickListener clickListener = new ContactClickListener();
+		_contacts = new ArrayList<ArcanumContact>();
+		_contactsAdapter = new ArcanumContactAdapter(this, android.R.layout.simple_list_item_1, _contacts);
+		_contactsView = (ListView)findViewById(R.id.listContacts);
+		_contactsView.setAdapter(_contactsAdapter);
+		_contactsView.setOnItemClickListener(clickListener);
+		_contactsView.setOnItemLongClickListener(clickListener);
 	}
 	
 	@Override
 	protected void onStart() {
 		super.onStart();
-		refreshContactList();			
+		refreshContactList();
 	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.activity_contacts, menu);
 		return true;
 	}
@@ -52,33 +65,29 @@ public class ContactsActivity extends Activity {
 	}
 	
 	public void refreshContactList() {
-		final LinearLayout layout_contacts = (LinearLayout)findViewById(R.id.layoutContacts);
-		layout_contacts.removeAllViews();
-		
-		for(PossibleContact c : _manager.getAll()) {
-			LinearLayout layout_item = build_ContactLine(String.format("%1$s\n%2$s", c.DisplayName, c.PhoneNumbers.get(0)));
-			layout_contacts.addView(layout_item);
+		_contacts.clear();		
+		for(ArcanumContact c : _manager.getAll()) {
+			_contacts.add(c);
+			_contactsAdapter.notifyDataSetChanged();
 		}
 	}
-
-	private LinearLayout build_ContactLine(final String name) {
-		LinearLayout layout = new LinearLayout(this);
-		layout.setOrientation(LinearLayout.HORIZONTAL);
-		layout.setLayoutParams(contract_layout_params);
 		
-		ImageView img = new ImageView(this);
-		img.setLayoutParams(contract_image_params);
-		img.setImageResource(R.drawable.ic_launcher);
+	private class ContactClickListener implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
+		@Override
+		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+			Object item = _contactsView.getItemAtPosition(position);
+			if(item != null && item instanceof ArcanumContact) {
+				ArcanumContact contact = (ArcanumContact)item;
+				Intent intent = new Intent(getBaseContext(), MessageActivity.class);
+				intent.putExtra("contact", contact);
+				startActivity(intent);
+				finish();
+			}
+		}
 		
-		EditText txt = new EditText(this);
-		txt.setLayoutParams(contract_txt_params);
-		txt.setEms(10);
-		txt.setText(name);
-		txt.setEnabled(false);
-				
-		layout.addView(img);
-		layout.addView(txt);
-		
-		return layout;
+		@Override
+		public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+			return false;
+		}
 	}
 }

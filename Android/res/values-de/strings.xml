@@ -15,4 +15,5 @@
         
     <string name="toast_msg_send_success">Nachricht (%1$d Bytes) gesendet.</string>
     <string name="toast_msg_send_failed">Senden der Nachricht fehlgeschlagen!</string>
+    <string name="msg_title">Chat mit %1$s</string>
 </resources>

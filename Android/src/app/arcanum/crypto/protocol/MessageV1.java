@@ -37,7 +37,6 @@ public class MessageV1 implements IMessage {
 		return this;
 	}
 
-
 	@Override
 	public byte[] toBytes() throws MessageProtocolException {		
 		OutputMessageStream stream = new OutputMessageStream();

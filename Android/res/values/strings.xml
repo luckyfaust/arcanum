@@ -13,6 +13,12 @@
     <string name="notfiy_new_message">New message!</string>
     <string name="notfiy_new_message_detail">New message from %1$s.</string>
     
-    <string name="toast_msg_send_success">Message send with %1$d bytes.</string>
+    <string name="msg_title">Chat with %1$s</string>
+    <string name="toast_msg_send_success">Message send successfully.</string>
     <string name="toast_msg_send_failed">Message sending failed!</string>
+        
+    <string name="contact_image_desc">Contact Image</string>
+    
+    <string name="service_message_name">Message Service</string>
+    <string name="service_message_desc">Message Service to handle all receiving messages.</string>
 </resources>

@@ -10,7 +10,6 @@
 
     <!-- http://developer.android.com/google/gcm/gs.html -->
     <permission android:name="app.arcanum.permission.C2D_MESSAGE" android:protectionLevel="signature" />
-
     <uses-permission android:name="app.arcanum.permission.C2D_MESSAGE" />
 
     <!-- App receives GCM messages. -->
@@ -31,22 +30,31 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme">
         <activity
             android:name="app.arcanum.MainActivity"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
             android:name="app.arcanum.ContactsActivity"
-            android:label="@string/title_activity_contacts" >
+            android:label="@string/title_activity_contacts">
         </activity>
+        <activity 
+            android:name="app.arcanum.MessageActivity" 
+            android:label="@string/title_activity_message" 
+            android:windowSoftInputMode="adjustResize|stateVisible">
+        </activity>
+        <service 
+            android:name="app.arcanum.services.MessageService"
+            android:label="@string/service_message_name"
+            android:description="@string/service_message_desc"
+            android:exported="false" />
 
-        <!-- For GCM -->
+        <!-- For GCM - START -->
         <receiver
             android:name="com.google.android.gcm.GCMBroadcastReceiver"
             android:permission="com.google.android.c2dm.permission.SEND" >
@@ -57,14 +65,8 @@
                 <category android:name="app.arcanum" />
             </intent-filter>
         </receiver>
-
         <service android:name="app.arcanum.GCMIntentService" />
-
-        <activity
-            android:name="app.arcanum.MessageActivity"
-            android:label="@string/title_activity_message"
-            android:windowSoftInputMode="adjustResize|stateVisible" >
-        </activity>
+        <!-- For GCM - END -->    
     </application>
 
 </manifest>

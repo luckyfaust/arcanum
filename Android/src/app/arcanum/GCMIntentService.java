@@ -1,13 +1,11 @@
 package app.arcanum;
 
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
+import android.os.IBinder;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import app.arcanum.contacts.ArcanumContactManager;
+import app.arcanum.contacts.ArcanumContactCollection;
 
 import com.google.android.gcm.GCMBaseIntentService;
 
@@ -29,38 +27,20 @@ public class GCMIntentService extends GCMBaseIntentService {
     	String sender = intent.getStringExtra("sender");
 
     	//TODO: Load contact by sender hash.
-    	int sender_id = 1;
+    	ArcanumContactCollection senders = AppSettings.getContactManager().getByHash(sender);
         
-    	// Creating a Notification
-    	// http://developer.android.com/guide/topics/ui/notifiers/notifications.html#CreateNotification
-    	Intent msgIntent = new Intent(this, MessageActivity.class);
-    	TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
-    	stackBuilder.addParentStack(MessageActivity.class);
-    	stackBuilder.addNextIntent(msgIntent);
-    	PendingIntent msgPendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-    	
-    	NotificationCompat.Builder mBuilder =
-    	        new NotificationCompat.Builder(this)
-    	        .setSmallIcon(R.drawable.ic_launcher) // required
-    	        .setContentTitle(GetContentTitleFromType(type)) // required
-    	        .setContentText(GetContentTextFromType(type, sender)) // required
-    	        .setContentIntent(msgPendingIntent)
-    	        .setAutoCancel(true);
-    	
-    	NotificationManager mNotificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-    	mNotificationManager.notify(type, sender_id, mBuilder.build());
+    	// Broadcast that a new message received.
+    	Intent msg_received_intent = new Intent(AppSettings.Broadcasts.MESSAGE_RECEIVED);
+    	msg_received_intent.putExtra("sender", senders.first());
+    	msg_received_intent.putExtra("type", type);
+    	LocalBroadcastManager
+    		.getInstance(context)
+    		.sendBroadcast(msg_received_intent);
 	}
-    
-    private String GetContentTitleFromType(String type) {
-    	if(type == "message")
-    		return getString(R.string.notfiy_new_message);
-    	return getString(R.string.app_name);
-	}
-    
-    private String GetContentTextFromType(String type, String... additional) {
-    	if(type == "message")
-    		return getString(R.string.notfiy_new_message_detail);
-    	return getString(R.string.app_name);
+       
+	@Override
+	public IBinder onBind(Intent intent) {
+		return super.onBind(intent);
 	}
 
 	@Override
@@ -102,11 +82,4 @@ public class GCMIntentService extends GCMBaseIntentService {
 	protected boolean onRecoverableError(Context context, String errorId) {
 		return super.onRecoverableError(context, errorId);
 	}
-	
-	private void sendGCMIntent(Context context, String message) {        
-		Intent broadcastIntent = new Intent();
-		broadcastIntent.setAction("GCM_RECEIVED_ACTION");
-		broadcastIntent.putExtra("gcm", message);
-		context.sendBroadcast(broadcastIntent);
-    }
 }

@@ -1,6 +1,8 @@
 import webapp2
 import logging
 
+from google.appengine.ext import ndb
+
 from gcm import GCM
 from entities import User
 from entities import Message
@@ -35,9 +37,10 @@ class MessageWorker(TaskBaseWorker):
         if eid is not None and eid != '':
             msg = Message.get_by_id(int(eid))
         elif key is not None and key != '':
-            msg = Message.get(key)
+            msg = ndb.Key(urlsafe=key).get()
         else:
             self.err('Neither id or key is passed!\n')
+            return
             
         if msg is None:
             self.err('Loading message failed!\n')
@@ -47,6 +50,10 @@ class MessageWorker(TaskBaseWorker):
         usr = User()
         usr.hash = msg.recipient
         usr = usr.loadme()
+        
+        if usr is None:
+            self.err('User-Recipient not found!');
+            return
         
         data = {'type': 'message', 'sender': msg.sender}
         

@@ -14,8 +14,8 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import app.arcanum.AppSettings;
-import app.arcanum.contracts.RegisterRequest;
-import app.arcanum.contracts.RegisterResponse;
+import app.arcanum.tasks.contracts.RegisterRequest;
+import app.arcanum.tasks.contracts.RegisterResponse;
 
 public class HttpSendRegisterTask extends AsyncTask<RegisterRequest, Void, RegisterResponse> {
 
@@ -31,8 +31,8 @@ public class HttpSendRegisterTask extends AsyncTask<RegisterRequest, Void, Regis
 			post.addHeader("Accept",		"application/json; charset=utf-8");
 			post.addHeader("Accept-Charset","utf-8");
 	        
-			Gson gson = new Gson();
-			String 			register_string = gson.toJson(reqs[0]);
+			Gson gson = new Gson();	
+			String register_string = gson.toJson(reqs[0]);
 			StringEntity 	register_entity = new StringEntity(register_string);
 	    	post.setEntity(register_entity);
 	    	

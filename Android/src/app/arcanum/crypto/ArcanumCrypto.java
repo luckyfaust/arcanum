@@ -1,5 +1,6 @@
 package app.arcanum.crypto;
 
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,6 +11,7 @@ import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.crypto.aes.AesCrypto;
 import app.arcanum.crypto.exceptions.CryptoException;
 import app.arcanum.crypto.exceptions.MessageProtocolException;
+import app.arcanum.crypto.protocol.IMessage;
 import app.arcanum.crypto.protocol.MessageV1;
 import app.arcanum.crypto.rsa.RsaCrypto;
 
@@ -30,7 +32,16 @@ public class ArcanumCrypto {
 		return create_message(to, msg, 1);
 	}
 	
+	public byte[] create_message(ArcanumContact to, byte[] content) throws MessageProtocolException {
+		return create_message(to, content, 1);
+	}
+	
 	public byte[] create_message(ArcanumContact to, String msg, int version) throws MessageProtocolException {
+		final byte[] content = msg.getBytes(message_encoding);
+		return create_message(to, content, version);
+	}
+	
+	public byte[] create_message(ArcanumContact to, byte[] content, int version) throws MessageProtocolException {
 		try {
 			switch (version) {
 				case 1:
@@ -40,7 +51,7 @@ public class ArcanumCrypto {
 					message.To = hash(to.Token, version);
 					
 					// Encrypt message.
-					message.Content = AES.encrypt(msg.getBytes(message_encoding));
+					message.Content = AES.encrypt(content);
 					message.IV 		= AES.IV();
 					message.Key		= AES.KEY();
 					
@@ -49,6 +60,20 @@ public class ArcanumCrypto {
 		} catch(CryptoException ex) {
 			throw new MessageProtocolException("Error while creating message.", ex);
 		}
+	}
+	
+	public IMessage read_message(byte[] content) throws MessageProtocolException {
+		java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(content, 0, 4);
+		buffer.order(ByteOrder.BIG_ENDIAN);
+		int version = buffer.getInt();
+		
+		switch (version) {
+			case 1:
+			default:
+				MessageV1 message = new MessageV1();
+				message.fromBytes(content);
+				return message;
+		}	
 	}
 	
 	public byte[] hash(String value, int version) throws CryptoException {

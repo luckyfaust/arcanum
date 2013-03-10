@@ -9,8 +9,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 
-import app.arcanum.contracts.RegisterRequest;
 import app.arcanum.tasks.HttpSendRegisterTask;
+import app.arcanum.tasks.contracts.RegisterRequest;
 
 import com.google.android.gcm.GCMRegistrar;
 
@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
 	protected void onStart() {
 		super.onStart();
 		
-		Intent myIntent = new Intent(getBaseContext(), MessageActivity.class);
+		Intent myIntent = new Intent(getBaseContext(), ContactsActivity.class);
         startActivity(myIntent);
 	}
 

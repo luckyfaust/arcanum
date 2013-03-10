@@ -14,8 +14,8 @@ import android.util.Log;
 import com.google.gson.Gson;
 
 import app.arcanum.AppSettings;
-import app.arcanum.contracts.ServerContactRequest;
-import app.arcanum.contracts.ServerContactResponse;
+import app.arcanum.tasks.contracts.ServerContactRequest;
+import app.arcanum.tasks.contracts.ServerContactResponse;
 
 public class HttpSendContactsTask extends AsyncTask<ServerContactRequest, Void, ServerContactResponse[]> {
 	@Override

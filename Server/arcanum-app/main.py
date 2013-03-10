@@ -23,6 +23,7 @@ from Crypto.PublicKey import RSA
 import json
 import webapp2
 import base64
+from datetime import datetime
 
 from cgi import escape
 from struct import unpack
@@ -61,6 +62,7 @@ class AuthHandler(webapp2.RequestHandler):
             user.parse(jsonUser)
             if user.isValid():
                 if user.isUnique():
+                    user.created = datetime.today()
                     user.put()  # Save user in db!
                     self.response.write('You are created!\n')
                 else:
@@ -100,7 +102,7 @@ class ContactsHandler(webapp2.RequestHandler):
         self.response.write('[')
         for u in userlist:
             for p in u.phones:
-                usr = User.all().filter('phoneHash=', p).get()
+                usr = User.query(User.hash == p).get()
                 if usr is not None:
                     if counter > 0:
                         self.response.write(',')
@@ -112,12 +114,19 @@ class ContactsHandler(webapp2.RequestHandler):
 class ContactHandler(webapp2.RequestHandler):
     def get(self, phoneHash):
         self.response.write('Requested phone hash is :\"'+ escape(phoneHash) +'\"\n')
-        users = User.all().filter("phoneHash = ", escape(phoneHash))
+        user = User.query(User.hash == escape(phoneHash)).get()
         
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        self.response.write(json.dumps([u.to_dict() for u in users.run(limit=1)]))       
+        self.response.write(user.to_json())
 
-class MessageHandler(webapp2.RequestHandler):
+class MessageGetHandler(webapp2.RequestHandler):
+    def post(self):
+        self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
+        body = self.request.body
+        
+        
+      
+class MessageSendHandler(webapp2.RequestHandler):
     def post(self):
         msg = self.request.body
         self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
@@ -142,11 +151,18 @@ class MessageHandler(webapp2.RequestHandler):
             message.secretkey   = raw.content[84:84+32]
             #message.content_length = raw.content[116:116+4]
             message.content     = raw.content[120:]
-            message.put()
+            message.created     = datetime.today()
+            msg_key = message.put()
             
+            self.response.write('<p>Datastore key: ' + str(msg_key) + '</p>\n')
+            self.response.write('<p>Datastore key_urlsafe: ' + str(msg_key.urlsafe()) + '</p>\n')
+            self.response.write('<p>Datastore key_integer: ' + str(msg_key.integer_id()) + '</p>\n')
             taskqueue.add(queue_name='notifications', 
                           url='/task/msg', 
-                          params={'key': message.key()})
+                          params={
+                              'key':msg_key.urlsafe(),
+                              'id':msg_key.integer_id()
+                          })
         else:
             self.error(404)
         # ...
@@ -163,6 +179,7 @@ class CryptoHandler(webapp2.RequestHandler):
     def get(self, size):
         self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
         self.response.write('Generated RSA keys for an size of {0}.\n'.format(size))
+        self.response.write(str(datetime.today()) + '\n')
         '''
         rng = Random.new().read
         keys = RSA.generate(int(size), rng)
@@ -178,6 +195,7 @@ app = webapp2.WSGIApplication([
     (r'/auth', AuthHandler),
     (r'/contacts', ContactsHandler),
     (r'/contact/(\w+)', ContactHandler),
-    (r'/msg', MessageHandler),
+    (r'/msg/send', MessageSendHandler),
+    (r'/msg/get', MessageGetHandler),
     (r'/gen/crypto/(\d+)', CryptoHandler)
 ], debug=True)

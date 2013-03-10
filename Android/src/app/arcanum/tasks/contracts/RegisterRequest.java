@@ -1,4 +1,4 @@
-package app.arcanum.contracts;
+package app.arcanum.tasks.contracts;
 
 import android.content.Context;
 
