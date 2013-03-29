@@ -9,6 +9,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 
+import app.arcanum.services.MessageService;
 import app.arcanum.tasks.HttpSendRegisterTask;
 import app.arcanum.tasks.contracts.RegisterRequest;
 
@@ -17,16 +18,14 @@ import com.google.android.gcm.GCMRegistrar;
 public class MainActivity extends Activity {
 	private static final String TAG = "MainActivity";
 	private final LayoutParams msg_layout_params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-	private String regId = "";
 	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        
-        // Init AppSettings
-        AppSettings.init(this);
+        if(!AppSettings.isInitialized)
+        	AppSettings.init(this);
         
         try {
         	// Init App
@@ -41,8 +40,15 @@ public class MainActivity extends Activity {
 	protected void onStart() {
 		super.onStart();
 		
+		// Start the MessageService.
+		Log.d(TAG, "Sending startService to MessageService.");
+		Intent messageServiceIntent = new Intent(getBaseContext(), MessageService.class);
+		startService(messageServiceIntent);
+		
+		// Switch to ContactsActivity.
 		Intent myIntent = new Intent(getBaseContext(), ContactsActivity.class);
         startActivity(myIntent);
+        finish();
 	}
 
 	@Override
@@ -61,6 +67,7 @@ public class MainActivity extends Activity {
 	private void registerClient() {
 		addProcessLine(Log.INFO, "Start registration.");
 		
+		String regId = null;
 		try {
 			// Check that the device supports GCM.
 			GCMRegistrar.checkDevice(this);
@@ -82,8 +89,6 @@ public class MainActivity extends Activity {
 			addProcessLine(Log.ERROR, "Error while registration GCM.", ex);
 		}
 		
-		//TODO: Remove this in the future!
-		addProcessLine(Log.INFO, "Registration id = " + regId);
 		AppSettings.GCM.REGISTRATION_ID = regId;
     }
  

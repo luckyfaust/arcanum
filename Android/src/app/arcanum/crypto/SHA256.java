@@ -23,4 +23,10 @@ public class SHA256 {
 		_digest.update(msg.getBytes(AppSettings.ENCODING));
 		return Base64.encodeToString(_digest.digest(), Base64.DEFAULT).trim();
 	}
+	
+	public static byte[] hashToBytes(String msg) {
+		_digest.reset();
+		_digest.update(msg.getBytes(AppSettings.ENCODING));
+		return _digest.digest();
+	}
 }

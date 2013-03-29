@@ -19,162 +19,64 @@ from Crypto import Random
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 '''
-
-import json
-import webapp2
-import base64
 from datetime import datetime
+from google.appengine.ext import ndb
+from google.appengine.api import users
+from google.appengine.api import memcache
 
-from cgi import escape
-from struct import unpack
+import jinja2
+import os
+import webapp2
 
-from entities import User
-from entities import RawUser
-from entities import Message
-from entities import RawMessage
 
-from google.appengine.api import taskqueue
+class UserPrefs(ndb.Model):
+    userid = ndb.StringProperty()
 
-    
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.write('<h1>Hello world!</h1>')      
-        self.response.write('''
-            <p>This is the main api for Arcanum.</p>
-            <p>Following methods are available:</p>
-            <p><i>TODO</i></p>
-        ''')
+        self.response.headers['Content-Type'] = 'text/html'
         
-class AuthHandler(webapp2.RequestHandler):
-    def get(self):
-        pem = open('key.pub', 'r')
-        publicKey = pem.read()
-        pem.close()
-
-        self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
-        self.response.write(publicKey)
-
-    def post(self):
-        self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
-        user = User()
-        try:
-            jsonUser = json.loads(self.request.body)  
-            user.parse(jsonUser)
-            if user.isValid():
-                if user.isUnique():
-                    user.created = datetime.today()
-                    user.put()  # Save user in db!
-                    self.response.write('You are created!\n')
-                else:
-                    self.response.write('We know you already.\n')
-                    # Trying to add notification ids.
-                    loaded_user = user.loadme()
-                    loaded_user_changed = False
-                    for reg_id in user.registration_ids:
-                        if reg_id not in loaded_user.registration_ids:
-                            loaded_user.registration_ids.append(reg_id)
-                            loaded_user_changed = True
-                    if loaded_user_changed:
-                        loaded_user.put()
-                        self.response.write('We updated your person.\n')
-                self.response.write('Success!\n')
-            else:
-                self.response.write('Failed!\n')
-                self.response.write('User not valid.\n')
-                self.response.write(user.hash)
-                self.response.write(user.type)
-        except Exception, e:
-            self.response.write('Failed!\n')
-            self.response.write(e)
-
-def as_user(dct):
-    raw = RawUser()
-    raw.parse(dct)
-    return raw
+        user = users.get_current_user()
+        if user:
+            userid    = user.user_id()
+            userprefs = self.get_userPrefs(userid)
             
-class ContactsHandler(webapp2.RequestHandler):
-    def post(self):
-        self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        
-        counter = 0
-        userlist = json.loads(self.request.body, object_hook=as_user)        
-        
-        self.response.write('[')
-        for u in userlist:
-            for p in u.phones:
-                usr = User.query(User.hash == p).get()
-                if usr is not None:
-                    if counter > 0:
-                        self.response.write(',')
-                    self.response.write(usr.to_json())
-                    counter += 1
-        
-        self.response.write(']')
-
-class ContactHandler(webapp2.RequestHandler):
-    def get(self, phoneHash):
-        self.response.write('Requested phone hash is :\"'+ escape(phoneHash) +'\"\n')
-        user = User.query(User.hash == escape(phoneHash)).get()
-        
-        self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        self.response.write(user.to_json())
-
-class MessageGetHandler(webapp2.RequestHandler):
-    def post(self):
-        self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
-        body = self.request.body
-        
-        
-      
-class MessageSendHandler(webapp2.RequestHandler):
-    def post(self):
-        msg = self.request.body
-        self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        self.response.write('<p>Message posted:</p>\n')
-        self.response.write('<p>' + escape(msg) + '</p>\n')
-
-        raw = RawMessage()
-        raw.content = base64.standard_b64decode(msg)
-        raw.put()
-        self.response.write('<p>Saved raw message in datastore.</p>\n')
-        
-        
-        # Split RawMessage to Message 
-        msg_version = unpack(">I", raw.content[0:4])[0]
-        self.response.write('<p>Message version is ' + str(msg_version) + '</p>\n')
-        
-        if msg_version == 1:
-            message = Message()
-            message.sender      = base64.standard_b64encode(raw.content[4:4+32])
-            message.recipient   = base64.standard_b64encode(raw.content[36:36+32])
-            message.iv          = raw.content[68:68+16]
-            message.secretkey   = raw.content[84:84+32]
-            #message.content_length = raw.content[116:116+4]
-            message.content     = raw.content[120:]
-            message.created     = datetime.today()
-            msg_key = message.put()
-            
-            self.response.write('<p>Datastore key: ' + str(msg_key) + '</p>\n')
-            self.response.write('<p>Datastore key_urlsafe: ' + str(msg_key.urlsafe()) + '</p>\n')
-            self.response.write('<p>Datastore key_integer: ' + str(msg_key.integer_id()) + '</p>\n')
-            taskqueue.add(queue_name='notifications', 
-                          url='/task/msg', 
-                          params={
-                              'key':msg_key.urlsafe(),
-                              'id':msg_key.integer_id()
-                          })
+            displayname = user.nickname()
+            url = users.create_logout_url(self.request.uri)
+            url_linktext = 'Logout'
         else:
-            self.error(404)
-        # ...
+            displayname = 'Anonymous'
+            url = users.create_login_url(self.request.uri)
+            url_linktext = 'Login'
         
-        # Load public Key from User
+        template_values = {
+            'displayname': displayname,
+            'url': url,
+            'url_linktext': url_linktext,
+        }
+        template = jinja_environment.get_template('templates/index.html')
+        self.response.out.write(template.render(template_values))
         
-        # Verify message
-        # !Attention!: this function performs the plain, primitive RSA encryption (textbook). In real applications, you always need to use proper cryptographic padding, and you should not directly verify data with this method. Failure to do so may lead to security vulnerabilities. It is recommended to use modules Crypto.Signature.PKCS1_PSS or Crypto.Signature.PKCS1_v1_5 instead.
-        # https://www.dlitz.net/software/pycrypto/api/current/Crypto.PublicKey.RSA._RSAobj-class.html#verify
+    def get_userPrefs(self,userid):
+        key = str(userid)
+        userprefs = memcache.get(key,namespace='app.arcanum.backend.userprefs')
+        if userprefs is not None:
+            return userprefs
+        else:
+            q = UserPrefs.query(UserPrefs.userid == userid)
+            userprefs = q.get()
+            if userprefs is None:
+                userprefs = UserPrefs()
+                userprefs.userid = userid
+                userprefs.put()
+            memcache.add(key,userprefs,namespace='app.arcanum.backend.userprefs')
 
-        # Send to receiving client
-        
+class SettingsHandler(webapp2.RequestHandler):
+    def get(self):
+        template_values = {}
+        template = jinja_environment.get_template('templates/settings.html')
+        self.response.out.write(template.render(template_values))
+            
 class CryptoHandler(webapp2.RequestHandler):
     def get(self, size):
         self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
@@ -190,12 +92,12 @@ class CryptoHandler(webapp2.RequestHandler):
         self.response.write('\n\n')        
         self.response.write(prv);
         '''
+        
+jinja_environment = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__))
+)
 app = webapp2.WSGIApplication([
     (r'/', MainHandler),
-    (r'/auth', AuthHandler),
-    (r'/contacts', ContactsHandler),
-    (r'/contact/(\w+)', ContactHandler),
-    (r'/msg/send', MessageSendHandler),
-    (r'/msg/get', MessageGetHandler),
+    (r'/settings/', SettingsHandler),
     (r'/gen/crypto/(\d+)', CryptoHandler)
 ], debug=True)

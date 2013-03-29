@@ -1,56 +1,72 @@
 package app.arcanum;
 
+
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.LinearLayout.LayoutParams;
+import android.widget.ListView;
 import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.contracts.IMessageReceiver;
 import app.arcanum.helper.ToastUtils;
 import app.arcanum.services.MessageService;
 import app.arcanum.tasks.contracts.MessageResponse;
+import app.arcanum.ui.adapters.MessageViewAdapter;
+import app.arcanum.ui.contracts.MessageItem;
+import app.arcanum.ui.contracts.MessageItemCollection;
+import app.arcanum.ui.contracts.SyncType;
 
 public class MessageActivity extends Activity implements IMessageReceiver {
-	private final LayoutParams msg_layout_params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-	private final LayoutParams msg_layout_params_own = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
 	private final ServiceConnection _messageServiceConnection = new MessageServiceConnection();
 	
 	private ArcanumContact _contact;
 	private MessageService _messageService;
-	private MessageResponse[] _messagesRaw;
+	
+	private ListView 				_messageView;
+	private MessageViewAdapter 		_messageViewAdapter;
+	private MessageItemCollection 	_messageViewList;
+
+	private String TAG;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_message);
 		
-		msg_layout_params.setMargins(0, 0, 50, 0);
-        msg_layout_params_own.setMargins(50, 0, 0, 0);
-        
-        // Get Controls
-        final EditText txtMessage = (EditText)findViewById(R.id.txtMessage);
-        final LinearLayout listOfMessages = (LinearLayout)findViewById(R.id.listMessages);
-        final Button button = (Button) findViewById(R.id.btnSend);
+		if(!AppSettings.isInitialized)
+			AppSettings.init(this);
+		
+		// Initialize contacts
+		MessageClickListener clickListener = new MessageClickListener();
+		_messageViewList = new MessageItemCollection();
+		_messageViewAdapter = new MessageViewAdapter(this, android.R.layout.simple_list_item_1, _messageViewList);
+		_messageView = (ListView)findViewById(R.id.message_listview);
+		_messageView.setAdapter(_messageViewAdapter);
+		_messageView.setOnItemClickListener(clickListener);
+		_messageView.setOnItemLongClickListener(clickListener);
+		
+		// Get Controls
+        final EditText txtMessage = (EditText)findViewById(R.id.message_edittext);
+        final Button button = (Button) findViewById(R.id.message_send);
         
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
             	final String sendText = txtMessage.getText().toString();
-				final EditText myMessage = build_MessageControl(sendText, true);
-				listOfMessages.addView(myMessage);
-								
-				ArcanumContact to 	= new ArcanumContact();
-				to.Token			= AppSettings.getPhoneNumber();
-									
-				if(_messageService != null && _messageService.sendMessage(to, sendText)) {
+				// TODO: Dummy add current send message.
+				// final EditText myMessage = build_MessageControl(sendText, true);
+            	// listOfMessages.addView(myMessage);
+				
+				if(_messageService != null && _messageService.sendMessage(_contact, sendText)) {
 					ToastUtils.showShort(MessageActivity.this, R.string.toast_msg_send_success);
 					txtMessage.setText(null);
 				} else {
@@ -59,26 +75,32 @@ public class MessageActivity extends Activity implements IMessageReceiver {
             }
         });
         
-        // Bind to MessageService
-        Intent messageServiceIntent = new Intent(this, MessageService.class);
-        bindService(messageServiceIntent, _messageServiceConnection, Context.BIND_AUTO_CREATE);
-        
-        // Load History and set contact
+        // Set contact & Activity title
         Bundle bundle = getIntent().getExtras();
         if(bundle != null) {
         	Object contact = bundle.get("contact");
             if(contact != null && contact instanceof ArcanumContact) {
             	_contact = (ArcanumContact)contact;
             	setTitle(getString(R.string.msg_title, _contact.DisplayName));
-            	syncMessages();
             }
         }  
 	}
-	
+
 	@Override
-	protected void onDestroy() {
+	protected void onStart() {
+		super.onStart();
+		
+		// Bind to MessageService
+        Intent messageServiceIntent = new Intent(this, MessageService.class);
+        bindService(messageServiceIntent, _messageServiceConnection, Context.BIND_AUTO_CREATE);
+	}
+
+	@Override
+	protected void onStop() {
+		super.onStop();
+		
+		// Unbind to MessageService
 		unbindService(_messageServiceConnection);
-		super.onDestroy();
 	}
 
 	@Override
@@ -121,21 +143,34 @@ public class MessageActivity extends Activity implements IMessageReceiver {
 	    }
 	}
 	
-	private void syncMessages() {
+	private void syncMessages(SyncType requestType) {
 		if(_messageService == null || _contact == null)
 			return;
 		
-		_messagesRaw = _messageService.getMessages(_contact);
-	}
-
-	private EditText build_MessageControl(final String msg, final boolean isOwnMessage) {
-		EditText txt = new EditText(this);
-		txt.setLayoutParams(isOwnMessage ? msg_layout_params_own : msg_layout_params);
-		txt.setEms(10);
-		txt.setText(msg);
-		txt.setEnabled(false);
-				
-		return txt;
+		MessageResponse[] result;
+		switch(requestType) {
+			case PUSHED:
+				result = _messageService.getUnreadMessages(_contact);
+				break;
+			case INIT:
+			default:
+				result = _messageService.getMessages(_contact);
+				break;			
+		}
+		
+		if(result == null || result.length == 0)
+			return;
+		
+		for(MessageResponse item : result) {
+			if(_messageViewList.containsByID(item.Key))
+				continue;
+			Log.d(TAG, String.format("Adding message item with id %d.", item.Key));
+			
+			MessageItem newItem = MessageItem.newInstance(item);
+			if(newItem.setContent(item.Content))
+				_messageViewList.add(newItem);
+		}
+		_messageViewAdapter.notifyDataSetChanged();
 	}
 	
 	private class MessageServiceConnection implements ServiceConnection {
@@ -145,15 +180,46 @@ public class MessageActivity extends Activity implements IMessageReceiver {
 				return;
 			_messageService = ((MessageService.MessageBinder)binder).getService();
 			_messageService.registerMessageActivity(MessageActivity.this);
+
+			// New binded, init history.
+			syncMessages(SyncType.INIT);
 		}
 		
 		@Override
 		public void onServiceDisconnected(ComponentName className) {
 			_messageService.unregisterMessageActivity(MessageActivity.this);
-			_messageService = null;			
-		}	
+			//_messageService = null;
+		}
 	}
 
+	private class MessageClickListener implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
+		@Override
+		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+			Object item = _messageView.getItemAtPosition(position);
+			if(item != null && item instanceof ArcanumContact) {
+				ArcanumContact contact = (ArcanumContact)item;
+				Intent intent = new Intent(getBaseContext(), MessageActivity.class);
+				intent.putExtra("contact", contact);
+				startActivity(intent);
+				finish();
+			}
+		}
+		
+		@Override
+		public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+			Object item = _messageView.getItemAtPosition(position);
+			if(item == null || !(item instanceof ArcanumContact))
+				return false;
+			
+			ArcanumContact contact = (ArcanumContact)item;
+			Intent intent = new Intent(Intent.ACTION_VIEW);
+			Uri uri = Uri.withAppendedPath(android.provider.ContactsContract.Contacts.CONTENT_LOOKUP_URI, contact.LookupKey);
+			intent.setData(uri);
+			startActivity(intent);
+			return true;
+		}
+	}
+	
 	@Override
 	public ArcanumContact getContact() {
 		return _contact;
@@ -161,6 +227,6 @@ public class MessageActivity extends Activity implements IMessageReceiver {
 
 	@Override
 	public void pushMessage() {
-		syncMessages();
+		syncMessages(SyncType.PUSHED);
 	}
 }

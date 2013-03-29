@@ -26,7 +26,6 @@ public class GCMIntentService extends GCMBaseIntentService {
     	String type = intent.getStringExtra("type");
     	String sender = intent.getStringExtra("sender");
 
-    	//TODO: Load contact by sender hash.
     	ArcanumContactCollection senders = AppSettings.getContactManager().getByHash(sender);
         
     	// Broadcast that a new message received.

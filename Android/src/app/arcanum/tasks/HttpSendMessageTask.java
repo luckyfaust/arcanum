@@ -1,45 +1,47 @@
 package app.arcanum.tasks;
 
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
 
+import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.util.Base64;
 import android.util.Log;
 import app.arcanum.AppSettings;
+import app.arcanum.tasks.contracts.ITaskPostListener;
 
-public class HttpSendMessageTask extends AsyncTask<byte[], String, String> {
-	protected ITaskCallbackable _callback;
+public class HttpSendMessageTask extends AsyncTask<byte[], Void, Boolean> {
+	private static final String TAG = HttpSendMessageTask.class.getName();
+	protected ITaskPostListener _callback;
+	private byte[] _input;
 	
-	public HttpSendMessageTask setCallback(ITaskCallbackable callback) {
+	public HttpSendMessageTask setCallback(ITaskPostListener callback) {
 		_callback = callback;
 		return this;
 	}
 	
 	@Override
-    protected String doInBackground(byte[]... params) {
-        byte[] result = null;
-        String str = "";
-        
+    protected Boolean doInBackground(byte[]... params) {
+		if(params.length <= 0)
+			return false;
+		
+		_input = params[0];
+		
+        AndroidHttpClient client = AndroidHttpClient.newInstance(AppSettings.HTTP.USER_AGENT);
         try {
-	        HttpClient client = new DefaultHttpClient();
-	        
-	        HttpPost post = new HttpPost(AppSettings.SERVER_URL + AppSettings.Methods.SEND_MESSAGE);
-	        post.addHeader("Connection", 				"Keep-Alive");
+        	HttpPost post = new HttpPost(AppSettings.SERVER_URL + AppSettings.Methods.SEND_MESSAGE);
 	        post.addHeader("Content-Type", 				AppSettings.MESSAGE_CONTENT_TYPE);
 	        post.addHeader("Content-Transfer-Encoding",	AppSettings.MESSAGE_CONTENT_ENCODING);
 	        
 	        //if(AppSettings.MESSAGE_CONTENT_ENCODING == "base64") {
-	        	String content = Base64.encodeToString(params[0], Base64.DEFAULT);
+	        	String content = Base64.encodeToString(_input, Base64.DEFAULT);
 	        	StringEntity entity = new StringEntity(content);
 	        	post.setEntity(entity);
 	        //} else {
@@ -54,33 +56,23 @@ public class HttpSendMessageTask extends AsyncTask<byte[], String, String> {
             HttpResponse response = client.execute(post);
 			
 	        StatusLine statusLine = response.getStatusLine();
-	        if(statusLine.getStatusCode() == HttpURLConnection.HTTP_OK){
-	            result = EntityUtils.toByteArray(response.getEntity());
-	            str = new String(result, "UTF-8");
-	        }
+	        return statusLine.getStatusCode() == HttpURLConnection.HTTP_OK;	         
         } catch (ClientProtocolException ex) {
         	final String message = "ClientProtocolException";
-        	Log.e("HttpPostTask", message, ex);
-        	TrySendErrorCallback(message, ex);
+        	Log.e(TAG, message, ex);
 		} catch (IOException ex) {
 			final String message = "IOException";
-			Log.e("HttpPostTask", message, ex);
-			TrySendErrorCallback(message, ex);
+			Log.e(TAG, message, ex);
+		} finally {
+			client.close();
 		}
-        return str;
+        return false;
     }
 
 	@Override
-	protected void onPostExecute(String result) {
+	protected void onPostExecute(Boolean result) {
 		super.onPostExecute(result);
-		if(_callback == null)
-			return;
-		_callback.PostExecuteCalled();
-	}
-	
-	private void TrySendErrorCallback(String message, Throwable ex) {
-		if(_callback == null)
-			return;
-		_callback.ErrorOccurred(message, ex);
+		if(_callback != null)
+			_callback.onPostExecute(TAG, _input, result);
 	}
 }

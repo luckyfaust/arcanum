@@ -1,26 +1,31 @@
 package app.arcanum.crypto;
 
 import java.nio.ByteOrder;
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import android.content.Context;
+import android.util.Log;
 import app.arcanum.AppSettings;
+import app.arcanum.R;
 import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.crypto.aes.AesCrypto;
 import app.arcanum.crypto.exceptions.CryptoException;
+import app.arcanum.crypto.exceptions.DecryptException;
 import app.arcanum.crypto.exceptions.MessageProtocolException;
 import app.arcanum.crypto.protocol.IMessage;
 import app.arcanum.crypto.protocol.MessageV1;
 import app.arcanum.crypto.rsa.RsaCrypto;
 
 public class ArcanumCrypto {
-	final Charset message_encoding = Charset.forName("UTF-8");
+	private final static String TAG = "ArcanumCrypto";
+	
 	public final RsaCrypto RSA;
 	public final AesCrypto AES;
 	
+	private final Context _context;
+	
+	
 	public ArcanumCrypto(Context context) {
+		_context = context;
 		RSA = new RsaCrypto(context);
 		AES = new AesCrypto(context);
 		
@@ -37,7 +42,7 @@ public class ArcanumCrypto {
 	}
 	
 	public byte[] create_message(ArcanumContact to, String msg, int version) throws MessageProtocolException {
-		final byte[] content = msg.getBytes(message_encoding);
+		final byte[] content = msg.getBytes(AppSettings.ENCODING);
 		return create_message(to, content, version);
 	}
 	
@@ -47,8 +52,8 @@ public class ArcanumCrypto {
 				case 1:
 				default:
 					MessageV1 message = new MessageV1();
-					message.From = hash(AppSettings.getPhoneNumber(), version);
-					message.To = hash(to.Token, version);
+					message.From = SHA256.hashToBytes(AppSettings.getPhoneNumber().getPhoneCleaned());
+					message.To = SHA256.hashToBytes(to.Token);
 					
 					// Encrypt message.
 					message.Content = AES.encrypt(content);
@@ -63,30 +68,32 @@ public class ArcanumCrypto {
 	}
 	
 	public IMessage read_message(byte[] content) throws MessageProtocolException {
-		java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(content, 0, 4);
-		buffer.order(ByteOrder.BIG_ENDIAN);
-		int version = buffer.getInt();
-		
-		switch (version) {
-			case 1:
-			default:
-				MessageV1 message = new MessageV1();
-				message.fromBytes(content);
-				return message;
-		}	
-	}
-	
-	public byte[] hash(String value, int version) throws CryptoException {
 		try {
+			java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(content, 0, 4);
+			buffer.order(ByteOrder.BIG_ENDIAN);
+			int version = buffer.getInt();
+			
 			switch (version) {
 				case 1:
 				default:
-					Charset encoding = Charset.forName("UTF-8");
-					MessageDigest digest = MessageDigest.getInstance("SHA-256");
-					return digest.digest(value.getBytes(encoding));
+					MessageV1 message = new MessageV1();
+					message.fromBytes(content);
+					
+					try {
+					// Decrypt with AES, init with passed IV and Key.
+						AES.setIV(message.IV);
+						AES.setKey(message.Key);
+						message.Content = AES.decrypt(message.Content);
+					} catch(DecryptException ex) {
+						Log.e(TAG , "Decrypt error while reading message.", ex);
+						message.Content = _context
+							.getString(R.string.message_status_cryptofail)
+							.getBytes(AppSettings.ENCODING);
+					}
+					return message;
 			}
-		} catch(NoSuchAlgorithmException ex) {
-			throw new CryptoException("Hashing failed.");
+		} catch(CryptoException ex) {
+			throw new MessageProtocolException("FATAL Error while reading the message.", ex);
 		}
 	}
 }

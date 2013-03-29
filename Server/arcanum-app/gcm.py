@@ -4,9 +4,9 @@
 import urllib
 import urllib2
 import json
+from collections import defaultdict
 import time
 import random
-from collections import defaultdict
 
 GCM_URL = 'https://android.googleapis.com/gcm/send'
 
@@ -52,6 +52,7 @@ def group_response(response, registration_ids, key):
 
 
 class GCM(object):
+
     # Timeunit is milliseconds.
     BACKOFF_INITIAL_DELAY = 1000;
     MAX_BACKOFF_DELAY = 1024000;
@@ -146,6 +147,9 @@ class GCM(object):
                 raise GCMAuthenticationException("There was an error authenticating the sender account")
             elif e.code == 503:
                 raise GCMUnavailableException("GCM service is unavailable")
+            else:
+                error = "GCM service error: %d" % e.code
+                raise GCMUnavailableException(error)
         except urllib2.URLError as e:
             raise GCMConnectionException("There was an internal error in the GCM server while trying to process the request")
 

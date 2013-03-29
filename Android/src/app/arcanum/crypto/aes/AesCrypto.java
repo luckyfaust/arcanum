@@ -19,15 +19,16 @@ import app.arcanum.crypto.ICrypto;
 import app.arcanum.crypto.exceptions.*;
 
 public class AesCrypto implements ICrypto {
-	final String ALGORITHM = "AES";
-	final String ALGORITHM_FULL = "AES/GCM/NoPadding";
-	final String ALGORITHM_RND = "SHA1PRNG";
-	final short KEY_SIZE = 256;
-	final short KEY_LENGTH = 32;
-	final short IV_LENGTH = 16;
+	public final short KEY_SIZE = 256;
+	public final short KEY_LENGTH = 32;
+	public final short IV_LENGTH = 16;
 	
-	byte[] _iv = new byte[IV_LENGTH];
-	byte[] _key = new byte[KEY_LENGTH];
+	private final String ALGORITHM = "AES";
+	private final String ALGORITHM_FULL = "AES/GCM/NoPadding";
+	private final String ALGORITHM_RND = "SHA1PRNG";
+	
+	private byte[] _iv = new byte[IV_LENGTH];
+	private byte[] _key = new byte[KEY_LENGTH];
 
 	public AesCrypto(final Context context) {}
 
@@ -98,16 +99,16 @@ public class AesCrypto implements ICrypto {
 		return _iv;
 	}
 
-	public void setIV(byte[] _iv) {
-		this._iv = _iv;
+	public void setIV(byte[] iv) {
+		this._iv = iv;
 	}
 
 	public byte[] KEY() {
 		return _key;
 	}
 
-	public void setKey(byte[] _key) {
-		this._key = _key;
+	public void setKey(byte[] key) {
+		this._key = key;
 	}
 
 	private SecretKey generate_secure_key() throws CryptoException {

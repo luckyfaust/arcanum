@@ -2,6 +2,7 @@ package app.arcanum;
 
 import java.util.ArrayList;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
@@ -36,6 +37,9 @@ public class ContactsActivity extends Activity {
 		_contactsView.setAdapter(_contactsAdapter);
 		_contactsView.setOnItemClickListener(clickListener);
 		_contactsView.setOnItemLongClickListener(clickListener);
+		
+		// Sync after create.
+		_manager.Sync();
 	}
 	
 	@Override
@@ -64,12 +68,17 @@ public class ContactsActivity extends Activity {
 	    }
 	}
 	
+	@Override
+	public void onBackPressed() {
+		// Prevent app from closing.
+	}
+
 	public void refreshContactList() {
-		_contacts.clear();		
+		_contacts.clear();
 		for(ArcanumContact c : _manager.getAll()) {
 			_contacts.add(c);
-			_contactsAdapter.notifyDataSetChanged();
 		}
+		_contactsAdapter.notifyDataSetChanged();
 	}
 		
 	private class ContactClickListener implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
@@ -81,13 +90,21 @@ public class ContactsActivity extends Activity {
 				Intent intent = new Intent(getBaseContext(), MessageActivity.class);
 				intent.putExtra("contact", contact);
 				startActivity(intent);
-				finish();
 			}
 		}
 		
 		@Override
 		public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-			return false;
+			Object item = _contactsView.getItemAtPosition(position);
+			if(item == null || !(item instanceof ArcanumContact))
+				return false;
+			
+			ArcanumContact contact = (ArcanumContact)item;
+			Intent intent = new Intent(Intent.ACTION_VIEW);
+			Uri uri = Uri.withAppendedPath(android.provider.ContactsContract.Contacts.CONTENT_LOOKUP_URI, contact.LookupKey);
+			intent.setData(uri);
+			startActivity(intent);
+			return true;
 		}
 	}
 }

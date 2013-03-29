@@ -3,43 +3,39 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MessageActivity" >
+    
+    <ListView
+        android:id="@+id/message_listview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/message_edittext"
+        android:transcriptMode="alwaysScroll"
+        android:stackFromBottom="true"
+        android:clickable="true"
+        android:longClickable="true" >
+
+    </ListView>
 	
-	<EditText
-	    android:id="@+id/txtMessage"
+    <EditText
+	    android:id="@+id/message_edittext"
 	    android:layout_width="wrap_content"
 	    android:layout_height="wrap_content"
 	    android:layout_alignParentBottom="true"
 	    android:layout_alignParentLeft="true"
+	    android:layout_toLeftOf="@+id/message_send"
 	    android:ems="10"
-	    android:inputType="text" >
-
+	    android:inputType="textShortMessage|textMultiLine">
         <requestFocus />
     </EditText>
     
     <Button
-        android:id="@+id/btnSend"
+        android:id="@+id/message_send"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-        android:text="@string/btn_Send"
-        android:layout_alignTop="@+id/txtMessage"
-        android:layout_toRightOf="@+id/txtMessage"/>
-
-    <ScrollView
-        android:id="@+id/scrollMessages"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:layout_above="@+id/txtMessage"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true" >
-
-        <LinearLayout
-            android:id="@+id/listMessages"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical" >           
-
-        </LinearLayout>
-    </ScrollView>
+        android:layout_below="@+id/message_listview"
+        android:focusable="false"
+        android:text="@string/btn_Send">
+    </Button>
 </RelativeLayout>

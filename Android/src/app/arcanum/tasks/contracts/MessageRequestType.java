@@ -4,5 +4,6 @@ public enum MessageRequestType {
 	ALL,
 	ALL_CONTACT,
 	UNREAD,
-	UNREAD_CONTACT
+	UNREAD_CONTACT,
+	IDS
 }

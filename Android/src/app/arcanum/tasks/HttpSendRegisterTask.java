@@ -2,14 +2,13 @@ package app.arcanum.tasks;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 
 import com.google.gson.Gson;
 
+import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -23,10 +22,9 @@ public class HttpSendRegisterTask extends AsyncTask<RegisterRequest, Void, Regis
 	protected RegisterResponse doInBackground(RegisterRequest... reqs) {
 		RegisterResponse resp = new RegisterResponse();
 		
+		AndroidHttpClient client = AndroidHttpClient.newInstance(AppSettings.HTTP.USER_AGENT);
 		try {
-			HttpClient client = new DefaultHttpClient();			
 			HttpPost post = new HttpPost(AppSettings.SERVER_URL + AppSettings.Methods.REGISTER);
-			post.addHeader("Connection", 	"Keep-Alive");
 			post.addHeader("Content-Type", 	"application/json; charset=utf-8");
 			post.addHeader("Accept",		"application/json; charset=utf-8");
 			post.addHeader("Accept-Charset","utf-8");
@@ -47,6 +45,8 @@ public class HttpSendRegisterTask extends AsyncTask<RegisterRequest, Void, Regis
 	        }       	
 		} catch(Exception ex) {
 			Log.e("HttpSendContactsTask", "Error while sync contacts.", ex);
+		} finally {
+			client.close();
 		}
 		
 		return resp;

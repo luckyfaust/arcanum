@@ -1,6 +1,7 @@
 import webapp2
 import logging
 
+from datetime import datetime
 from google.appengine.ext import ndb
 
 from gcm import GCM
@@ -18,10 +19,10 @@ class TaskBaseWorker(webapp2.RequestHandler):
         self.response.write(msg)
         logging.error(msg)        
         
-class DefaultHandler():
+class DefaultHandler(TaskBaseWorker):
     def get(self):
         self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
-        self.response.write('Nothing')
+        self.response.write('Nothing\n\n')
 
 class AdminHandler(webapp2.RequestHandler):
     def get(self):
@@ -32,6 +33,7 @@ class AdminHandler(webapp2.RequestHandler):
 class MessageWorker(TaskBaseWorker):
     def post(self):
         eid = self.request.get('id', default_value='')
+        self.response.write('<h1>'+eid+'</h1>')
         key = self.request.get('key', default_value='')
         
         if eid is not None and eid != '':
@@ -68,8 +70,11 @@ class MessageWorker(TaskBaseWorker):
         self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
         self.debug(response)
         
+        # Mark message as pushed.
+        msg.pushed = datetime.now()
+        msg.put()
+        
 app = webapp2.WSGIApplication([
     (r'/task/',      DefaultHandler),
-    (r'/task/msg',   MessageWorker),
-    (r'/task/admin/', AdminHandler)]
+    (r'/task/msg',   MessageWorker)]
 , debug=True)

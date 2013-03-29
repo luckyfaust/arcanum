@@ -4,5 +4,5 @@ public enum MessageContentType {
 	TEXT, 
 	IMAGE, 
 	VIDEO,
-	LOCATION
+	GEO
 }

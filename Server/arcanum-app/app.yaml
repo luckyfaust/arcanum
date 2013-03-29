@@ -2,25 +2,32 @@ application: arcanum-app
 version: 2
 runtime: python27
 api_version: 1
-threadsafe: yes
+threadsafe: true
+
+builtins:
+- remote_api: on
+
+inbound_services:
+- warmup
 
 handlers:
 - url: /favicon\.ico
   static_files: favicon.ico
   upload: favicon\.ico
-
-- url: /task/admin/.*
-  script: task.app
-  login: admin
   
 - url: /task/.*
   script: task.app
 
+- url: /api/.*
+  script: api.app  
+  
 - url: .*
   script: main.app
 
 libraries:
 - name: webapp2
+  version: latest
+- name: jinja2
   version: latest
 - name: pycrypto
   version: "2.6"

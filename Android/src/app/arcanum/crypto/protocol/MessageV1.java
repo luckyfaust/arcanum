@@ -1,8 +1,9 @@
 package app.arcanum.crypto.protocol;
 
+import android.util.Base64;
 import app.arcanum.crypto.exceptions.MessageProtocolException;
 
-public class MessageV1 implements IMessage {
+public final class MessageV1 implements IMessage {
 	public final int VERSION = 1;
 	
 	public byte[] From = new byte[32];
@@ -12,7 +13,7 @@ public class MessageV1 implements IMessage {
 	public byte[] Content;
 		
 	@Override
-	public IMessage fromBytes(byte[] msg) throws MessageProtocolException {
+	public final IMessage fromBytes(byte[] msg) throws MessageProtocolException {
 		if(msg.length < 4+32+32+16+32+8+1)
 			throw new MessageProtocolException("Message to short.");
 		
@@ -29,7 +30,7 @@ public class MessageV1 implements IMessage {
 			int length = stream.readInt();
 			Content = new byte[length];
 			stream.read(Content, 0, length);
-		} catch(java.io.IOException ex) {
+		} catch(Exception ex) {
 			throw new MessageProtocolException("Message is corrupt.", ex);
 		} finally {
 			stream.close();
@@ -38,7 +39,7 @@ public class MessageV1 implements IMessage {
 	}
 
 	@Override
-	public byte[] toBytes() throws MessageProtocolException {		
+	public final byte[] toBytes() throws MessageProtocolException {		
 		OutputMessageStream stream = new OutputMessageStream();
 		try {
 			stream.writeInt(VERSION);
@@ -54,5 +55,20 @@ public class MessageV1 implements IMessage {
 			stream.close();
 		}
 		return stream.toByteArray();
+	}
+
+	@Override
+	public final String getSender() {
+		return Base64.encodeToString(From, Base64.DEFAULT).trim();
+	}
+
+	@Override
+	public final String getRecipient() {
+		return Base64.encodeToString(To, Base64.DEFAULT).trim();
+	}
+
+	@Override
+	public final byte[] getContent() {
+		return Content;
 	}	
 }

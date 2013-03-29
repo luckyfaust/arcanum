@@ -1,0 +1,26 @@
+<!-- 
+	Arcanum Frontend Pages
+	
+	Template-Engine:
+		http://jinja.pocoo.org/docs/ 
+-->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+	<head>
+		{% block head %}
+		<link rel="stylesheet" href="css/style.css" />
+    	<title>{% block page_title %}{% endblock %} - Arcanum</title>
+    	{% endblock %}
+	</head>
+	<body>
+		<div id="header">
+			<h1>{{ self.page_title() }} - Arcanum</h1>
+		</div>
+		<div id="content">{% block content %}{% endblock %}</div>
+    	<div id="footer">
+        	{% block page_footer %}
+        	&copy; Copyright 2012 by <a href="http://www.malcharek.eu/">Malmi</a>.
+        	{% endblock %}
+    	</div>
+	</body>
+</html>

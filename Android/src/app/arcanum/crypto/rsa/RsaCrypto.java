@@ -121,7 +121,7 @@ public class RsaCrypto implements ICrypto {
 		return null;
 	}
 	
-	private String getPublicKey(PublicKey key) {
+	public static String getPublicKey(PublicKey key) {
 		if(key == null)
 			return null;
 		

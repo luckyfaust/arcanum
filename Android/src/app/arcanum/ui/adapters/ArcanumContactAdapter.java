@@ -24,7 +24,7 @@ public class ArcanumContactAdapter extends ArrayAdapter<ArcanumContact>{
             LayoutInflater vi = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             v = vi.inflate(app.arcanum.R.layout.custom_listview_contact_row, null);
         }
-                
+
         ArcanumContact contact = _contacts.get(position);
         if (contact != null) {
             TextView name = (TextView)v.findViewById(app.arcanum.R.id.contact_listitem_name);
@@ -32,10 +32,9 @@ public class ArcanumContactAdapter extends ArrayAdapter<ArcanumContact>{
 	        if (name != null) {
 	            name.setText(contact.DisplayName);
 	        }
-	
+
 	        if(phone != null) {
-	        	// TODO: Translate
-	            phone.setText("Number: " + contact.PhoneNumbers.get(0));
+	            phone.setText(contact.PhoneNumbers.get(0).getPhone());
 	        }
 	    }
         return v;

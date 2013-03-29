@@ -1,4 +1,5 @@
 from google.appengine.ext import ndb
+from google.appengine.api import memcache
 import json
 
 #
@@ -8,7 +9,8 @@ class DictModel(ndb.Model):
     #def to_dict(self):
     #    return dict([(p, unicode(getattr(self, p))) for p in self.properties()])
     def to_json(self):
-        return json.dumps(self.to_dict())
+        #TODO: Add datetime to json dump!
+        return json.dumps(self.to_dict(exclude=["created","modified","pushed","readed"]))
 
 class RawUser(DictModel):
     lookup_key  = ndb.StringProperty(required=True)
@@ -51,24 +53,36 @@ class User(DictModel):
         return not isInDatastore
     
     def loadme(self):
-        usr_query = User.query(User.hash == self.hash)
-        if self.type is not None:
-            usr_query = usr_query.filter(User.type == self.type)
-        return usr_query.get()
+        key = self.hash + self.type
+        usr = memcache.get(key,namespace='app.arcanum.backend.users')
+        if usr is not None:
+            return usr
+        else:
+            usr_query = User.query(User.hash == self.hash)
+            if self.type is not None:
+                usr_query = usr_query.filter(User.type == self.type)
+            usr = usr_query.get()
+            memcache.set(key,usr,namespace='app.arcanum.backend.users')
+            return usr
+    
+    def save(self):
+        key = self.hash + self.type
+        memcache.set(key,self,namespace='app.arcanum.backend.users')
+        self.put()
 
 class RawMessage(DictModel):
-    content = ndb.BlobProperty(required=True,indexed=False)        
+    content = ndb.BlobProperty(required=True,indexed=False)
     
 class Message(DictModel):
+    #raw_key     = ndb.KeyProperty(required=True,kind=RawMessage)
+    version     = ndb.IntegerProperty(default=1)
     sender      = ndb.StringProperty(required=True)
     recipient   = ndb.StringProperty(required=True)
-    iv          = ndb.BlobProperty(required=True,indexed=False)
-    secretkey   = ndb.BlobProperty(required=True,indexed=False)
-    content     = ndb.BlobProperty(required=True,indexed=False)
-    contentType = ndb.StringProperty(indexed=False)
+    content     = ndb.BlobProperty(required=True,indexed=False,compressed=True)
+    contentType = ndb.StringProperty(default='TEXT',choices=['TEXT','VIDEO','IMAGE','GEO'])
     created = ndb.DateTimeProperty(required=True,indexed=False,auto_now_add=True)
-    pushed = ndb.DateTimeProperty(indexed=False)
-    readed = ndb.DateTimeProperty(indexed=False)
+    pushed = ndb.DateTimeProperty()
+    readed = ndb.DateTimeProperty()
     modified = ndb.DateTimeProperty(required=True,indexed=False,auto_now=True)
     
     def parse(self, dictionary):

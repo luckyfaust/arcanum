@@ -21,4 +21,6 @@
     
     <string name="service_message_name">Message Service</string>
     <string name="service_message_desc">Message Service to handle all receiving messages.</string>
+    
+    <string name="message_status_cryptofail">ERR: Crypto:Invalid Message</string>
 </resources>
