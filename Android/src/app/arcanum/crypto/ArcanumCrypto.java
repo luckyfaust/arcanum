@@ -1,7 +1,7 @@
 package app.arcanum.crypto;
 
-import java.nio.ByteOrder;
 
+import java.nio.ByteOrder;
 import android.content.Context;
 import android.util.Log;
 import app.arcanum.AppSettings;
@@ -22,7 +22,6 @@ public class ArcanumCrypto {
 	public final AesCrypto AES;
 	
 	private final Context _context;
-	
 	
 	public ArcanumCrypto(Context context) {
 		_context = context;
@@ -48,7 +47,7 @@ public class ArcanumCrypto {
 	
 	public byte[] create_message(ArcanumContact to, byte[] content, int version) throws MessageProtocolException {
 		try {
-			switch (version) {
+			switch(version) {
 				case 1:
 				default:
 					MessageV1 message = new MessageV1();
@@ -57,8 +56,9 @@ public class ArcanumCrypto {
 					
 					// Encrypt message.
 					message.Content = AES.encrypt(content);
-					message.IV 		= AES.IV();
-					message.Key		= AES.KEY();
+					message.IV = AES.IV();
+					// message.Key = AES.KEY();
+					message.Key = RSA.encrypt(AES.KEY(), to.getPublicKey());
 					
 					return message.toBytes();
 			}
@@ -67,28 +67,49 @@ public class ArcanumCrypto {
 		}
 	}
 	
+	public byte[] create_signature(final byte[] message) throws MessageProtocolException {
+		try {
+			final byte[] signedHash = RSA.sign(message);
+			return signedHash;
+		} catch(CryptoException ex) {
+			throw new MessageProtocolException("Error while creating signature from an message.", ex);
+		}
+	}
+	
+	public boolean verify_message(final byte[] message, final byte[] sign, final ArcanumContact contact) throws MessageProtocolException {
+		try {
+			return RSA.verify(message, sign, contact.getPublicKey());
+		} catch(CryptoException ex) {
+			throw new MessageProtocolException("Error while verifing a message with an signature.", ex);
+		}
+	}
+	
 	public IMessage read_message(byte[] content) throws MessageProtocolException {
 		try {
+			// Verify message
+			// TODO: Verify message
+			
+			// Get message version
 			java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(content, 0, 4);
 			buffer.order(ByteOrder.BIG_ENDIAN);
 			int version = buffer.getInt();
 			
-			switch (version) {
+			// Read message
+			switch(version) {
 				case 1:
 				default:
 					MessageV1 message = new MessageV1();
 					message.fromBytes(content);
 					
 					try {
-					// Decrypt with AES, init with passed IV and Key.
+						// Decrypt with AES, init with passed IV and Key.
 						AES.setIV(message.IV);
-						AES.setKey(message.Key);
+						AES.setKey(RSA.decrypt(message.Key));
 						message.Content = AES.decrypt(message.Content);
 					} catch(DecryptException ex) {
-						Log.e(TAG , "Decrypt error while reading message.", ex);
-						message.Content = _context
-							.getString(R.string.message_status_cryptofail)
-							.getBytes(AppSettings.ENCODING);
+						Log.e(TAG, "Decrypt error while reading message.", ex);
+						message.Content = _context.getString(R.string.message_status_cryptofail)
+								.getBytes(AppSettings.ENCODING);
 					}
 					return message;
 			}

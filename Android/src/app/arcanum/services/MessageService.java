@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
@@ -16,12 +14,6 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
-
-import com.google.common.base.Functions;
-import com.google.common.collect.Lists;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -42,7 +34,6 @@ import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Base64;
 import android.util.Log;
-
 import app.arcanum.AppSettings;
 import app.arcanum.MessageActivity;
 import app.arcanum.R;
@@ -59,6 +50,10 @@ import app.arcanum.tasks.contracts.ITaskPostListener;
 import app.arcanum.tasks.contracts.MessageRequest;
 import app.arcanum.tasks.contracts.MessageRequestType;
 import app.arcanum.tasks.contracts.MessageResponse;
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class MessageService extends Service implements ITaskPostListener {
 	private final static String TAG = MessageService.class.getSimpleName();
@@ -106,6 +101,7 @@ public class MessageService extends Service implements ITaskPostListener {
 		Log.i(TAG, String.format("Sending a new message to %s with %s.", to.Token, type.toString()));
 		try {
 			final byte[] cipherMessage = AppSettings.getCrypto().create_message(to, content);
+			final byte[] signMessage = AppSettings.getCrypto().create_signature(cipherMessage);
 			new HttpSendMessageTask()
 				.setCallback(this)
 				.execute(cipherMessage);
@@ -118,30 +114,27 @@ public class MessageService extends Service implements ITaskPostListener {
 	
 	/**
 	 * Returns all messages, from all users, for the current user.
-	 * @return
 	 */
-	public MessageResponse[] getMessages() {
+	public void getMessages() {
 		MessageRequest request = new MessageRequest(MessageRequestType.ALL);		
-		return exec_getMessages(request);
+		exec_getMessages(request);
 	}
 	
 	/**
 	 * Returns all message, from passed {@link ArcanumContact}, for the current user.
 	 * @param contact
-	 * @return
 	 */
-	public MessageResponse[] getMessages(final ArcanumContact contact) {
+	public void getMessages(final ArcanumContact contact) {
 		MessageRequest request = new MessageRequest(contact, MessageRequestType.ALL_CONTACT);
-		return exec_getMessages(request);
+		exec_getMessages(request);
 	}
 	
 	/**
 	 * Returns all unreaded messages, from all users,  for the current user.
-	 * @return
 	 */
-	public MessageResponse[] getUnreadMessages() {
+	public void getUnreadMessages() {
 		MessageRequest request = new MessageRequest(MessageRequestType.UNREAD);		
-		return exec_getMessages(request);
+		exec_getMessages(request);
 	}
 	
 	/**
@@ -149,25 +142,14 @@ public class MessageService extends Service implements ITaskPostListener {
 	 * @param contact
 	 * @return
 	 */
-	public MessageResponse[] getUnreadMessages(final ArcanumContact contact) {
+	public void getUnreadMessages(final ArcanumContact contact) {
 		MessageRequest request = new MessageRequest(contact, MessageRequestType.UNREAD_CONTACT);
-		return exec_getMessages(request);
+		exec_getMessages(request);
 	}
 	
-	private MessageResponse[] exec_getMessages(MessageRequest request) {
-		try {
-			Log.i(TAG, "Starting now a task to get messages.");
-			MessageResponse[] messages = new MessageGetTask()
-				.setCallback(this)
-				.execute(request)
-				.get();
-			return messages;
-		} catch (InterruptedException ex) {
-			Log.e(TAG, "InterruptedException", ex);
-		} catch (ExecutionException ex) {
-			Log.e(TAG, "ExecutionException", ex);
-		}
-		return null;		
+	private void exec_getMessages(MessageRequest request) {
+		Log.i(TAG, "Starting now a task to get messages.");
+		new MessageGetTask().setCallback(this).execute(request);
 	}
 	
 	public void registerMessageActivity(IMessageReceiver receiver) {
@@ -189,13 +171,16 @@ public class MessageService extends Service implements ITaskPostListener {
 	
 	@Override
 	public void onPostExecute(String taskname, Object input, Object result) {
+		if(result == null) return;
+
 		if(taskname.equals(MessageGetTask.class.getName())) {
 			MessageResponse[] messages = (MessageResponse[])result;
 			
+
 			for (MessageResponse msg : messages) {
 				IMessage message    = null;
 				try {
-					byte[] byte_content = Base64.decode(msg.Content, Base64.DEFAULT);
+					byte[] byte_content = Base64.decode(msg.Content, AppSettings.BASE64_FLAGS);
 					message = AppSettings.getCrypto().read_message(byte_content);
 				} catch (MessageProtocolException ex) {
 					Log.e(TAG, String.format("Message %d is not readable.", msg.Key), ex);
@@ -248,7 +233,7 @@ public class MessageService extends Service implements ITaskPostListener {
 				return;
 			}
 			
-			String raw_content = Base64.encodeToString(byte_input, Base64.DEFAULT);
+			String raw_content = Base64.encodeToString(byte_input, AppSettings.BASE64_FLAGS);
 			ContentValues values = new ContentValues();
 			values.put(MessageTable.COLUMN_KEY, (Long)null);
 			values.put(MessageTable.COLUMN_SENDER, message.getSender());
@@ -417,7 +402,7 @@ public class MessageService extends Service implements ITaskPostListener {
 		        
 				// Request One!
 				long[] ids = doRequestOne(client, post);
-	            if(ids == null) return result;
+				if(ids == null || ids.length == 0) return result;
 	            
 	            // Make Array to List
 				Long[] longObjects = ArrayUtils.toObject(ids);
@@ -510,7 +495,5 @@ public class MessageService extends Service implements ITaskPostListener {
 			_callback = callback;
 			return this;
 		}
-	}
-
-	
+	}	
 }

@@ -14,20 +14,35 @@
 	        android:layout_width="wrap_content"
 	        android:layout_height="wrap_content"
 	        android:layout_gravity="right"
-	        android:text="Example text"
+	        android:text="@string/app_name"
 	        android:textIsSelectable="true" />
 	
-		<TextView
-		    android:id="@+id/message_listitem_timestamp"
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:layout_gravity="right"
-		    android:layout_marginLeft="10dp"
-		    android:layout_marginRight="10dp"
-		    android:gravity="right"
-		    android:text="2012-01-31"
-		    android:textIsSelectable="false"
-		    android:textSize="8sp" />
+	    <LinearLayout
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="right"
+	        android:gravity="right"
+	        android:orientation="horizontal" >
+
+			<TextView
+			    android:id="@+id/message_listitem_timestamp"
+			    android:layout_width="wrap_content"
+			    android:layout_height="wrap_content"
+			    android:text="@string/app_name"
+			    android:textIsSelectable="false"
+			    android:textSize="8sp" />
+			
+			<ImageView 
+			    android:id="@+id/message_listitem_statusimage"
+			    android:layout_width="20dp"
+			    android:layout_height="10dp"
+			    android:src="@drawable/message_pending"
+			    android:scaleType="fitXY"
+			    android:contentDescription="@string/message_status_imagedesc"
+			    />
+	    </LinearLayout>
+
+
     </LinearLayout>
 
 </LinearLayout>

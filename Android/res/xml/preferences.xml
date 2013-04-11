@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory
+        android:key="pref_category_general"
+        android:title="@string/pref_category_general">
+	    <EditTextPreference 
+	        android:key="pref_displayname"
+	        android:title="@string/pref_displayname"
+	        android:summary="@string/pref_displayname_summary" />
+		<RingtonePreference
+		    android:key="pref_ringtone"
+		    android:title="@string/pref_ringtone"
+	        android:summary="@string/pref_ringtone_summary" />
+	</PreferenceCategory>
+	<PreferenceCategory
+	    android:key="pref_category_about"
+	    android:title="@string/pref_category_about">
+	    <Preference android:title="@string/pref_web_page" >
+		    <intent android:action="android.intent.action.VIEW"
+		            android:data="@string/pref_web_page" />
+		</Preference>
+	</PreferenceCategory>
+</PreferenceScreen>

@@ -1,13 +1,12 @@
 package app.arcanum;
 
 import java.nio.charset.Charset;
-
 import org.apache.commons.lang3.StringUtils;
-
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
 import android.content.Context;
 import android.telephony.TelephonyManager;
+import android.util.Base64;
 import app.arcanum.contacts.ArcanumContactManager;
 import app.arcanum.contracts.PhoneNumber;
 import app.arcanum.crypto.ArcanumCrypto;
@@ -37,6 +36,7 @@ public class AppSettings {
 	public static final String APP_VERSION = "1.0.0";
 		
 	public static final Charset ENCODING = Charset.forName("UTF-8");
+	public static final int BASE64_FLAGS = Base64.DEFAULT | Base64.NO_WRAP;
 	//public static final String SERVER_URL = "http://arcanum-app.appspot.com/api/";
 	public static final String SERVER_URL = "http://192.168.178.25:8080/api/";
 	public static final byte[] SERVER_URL_BYTES = SERVER_URL.getBytes(ENCODING);

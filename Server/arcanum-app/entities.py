@@ -53,7 +53,7 @@ class User(DictModel):
         return not isInDatastore
     
     def loadme(self):
-        key = self.hash + self.type
+        key = self.hash
         usr = memcache.get(key,namespace='app.arcanum.backend.users')
         if usr is not None:
             return usr
@@ -66,9 +66,9 @@ class User(DictModel):
             return usr
     
     def save(self):
+        self.put()
         key = self.hash + self.type
         memcache.set(key,self,namespace='app.arcanum.backend.users')
-        self.put()
 
 class RawMessage(DictModel):
     content = ndb.BlobProperty(required=True,indexed=False)

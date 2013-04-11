@@ -1,11 +1,10 @@
 package app.arcanum.contacts;
 
 import java.security.PublicKey;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-
+import app.arcanum.contracts.MailAddress;
 import app.arcanum.contracts.PhoneNumber;
 import app.arcanum.crypto.rsa.RsaCrypto;
 
@@ -58,10 +57,16 @@ public class ArcanumContact extends PossibleContact {
 		return true;
 	}
 	
-	public void updateToken(String phoneHash) {
+	public void updateToken(String hash) {
 		for(PhoneNumber phone : PhoneNumbers) {
-			if(phone.equalsHash(phoneHash)) {
+			if(phone.equalsHash(hash)) {
 				Token = phone.getPhoneCleaned();
+				return;
+			}
+		}
+		for(MailAddress mail : MailAddresses) {
+			if(mail.equalsHash(hash)) {
+				Token = mail.getMail();
 				return;
 			}
 		}

@@ -1,20 +1,20 @@
 package app.arcanum;
 
 import java.util.ArrayList;
-
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.app.Activity;
-import android.content.Intent;
+import android.support.v4.app.FragmentActivity;
 import android.view.Menu;
 import android.view.View;
-import android.widget.*;
+import android.widget.AdapterView;
+import android.widget.ListView;
 import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.contacts.ArcanumContactManager;
 import app.arcanum.ui.adapters.ArcanumContactAdapter;
 
-public class ContactsActivity extends Activity {
-	private ListView _contactsView;	
+public class ContactsActivity extends FragmentActivity {
+	private ListView _contactsView;
 	
 	private ArcanumContactManager _manager;
 	private ArcanumContactAdapter _contactsAdapter;
@@ -62,6 +62,8 @@ public class ContactsActivity extends Activity {
 	    		refreshContactList();
 	    		return true;
 		    case R.id.menu_settings:
+				Intent settingsIntent = new Intent(getBaseContext(), SettingsActivity.class);
+				startActivity(settingsIntent);
 		        return true;
 		    default:
 		        return super.onOptionsItemSelected(item);

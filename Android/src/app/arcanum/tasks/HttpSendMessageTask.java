@@ -41,7 +41,7 @@ public class HttpSendMessageTask extends AsyncTask<byte[], Void, Boolean> {
 	        post.addHeader("Content-Transfer-Encoding",	AppSettings.MESSAGE_CONTENT_ENCODING);
 	        
 	        //if(AppSettings.MESSAGE_CONTENT_ENCODING == "base64") {
-	        	String content = Base64.encodeToString(_input, Base64.DEFAULT);
+	        	String content = Base64.encodeToString(_input, AppSettings.BASE64_FLAGS);
 	        	StringEntity entity = new StringEntity(content);
 	        	post.setEntity(entity);
 	        //} else {

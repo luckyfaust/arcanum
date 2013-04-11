@@ -202,7 +202,7 @@ class MessageGetHandler(webapp2.RequestHandler):
                 Message.readed == None
             ))
             
-        messages = msg_query.fetch(limit=5)
+        messages = msg_query.fetch()
         msg_result = []
         for msg in messages:
             # Mark message as readed!

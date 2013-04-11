@@ -112,7 +112,7 @@ public class ArcanumContactManager {
 			//.withValue(RawContacts.RAW_CONTACT_IS_READ_ONLY, "1")
 			.build());
 		
-		String decodedPublicKey = Base64.encodeToString(contact.getPublicKey().getEncoded(), Base64.DEFAULT); 
+		String decodedPublicKey = Base64.encodeToString(contact.getPublicKey().getEncoded(), AppSettings.BASE64_FLAGS); 
 		ops.add(ContentProviderOperation.newInsert(Data.CONTENT_URI)
 			.withValueBackReference(Data.RAW_CONTACT_ID, rawContactInsertIndex)
 			.withValue(Data.MIMETYPE, ArcanumContactManager.MIME_TYPE)

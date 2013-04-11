@@ -27,6 +27,11 @@ public class InputMessageStream extends InputStream {
 		return buffer.getLong();
 	}
 	
+	public void read(byte[] buffer, int length) throws IOException {
+		for(int i = 0; i < length; i++)
+			buffer[i] = (byte)read();
+	}
+
 	@Override
 	public int read() throws IOException {
 		return _msg[_offset++];		
@@ -37,5 +42,9 @@ public class InputMessageStream extends InputStream {
 		try {
 			super.close();
 		} catch (IOException e) {}
+	}
+	
+	public int remainingSize() {
+		return _msg.length - _offset;
 	}
 }

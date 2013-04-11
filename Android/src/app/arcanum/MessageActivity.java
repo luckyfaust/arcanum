@@ -1,14 +1,17 @@
 package app.arcanum;
 
-
-import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -18,25 +21,35 @@ import android.widget.EditText;
 import android.widget.ListView;
 import app.arcanum.contacts.ArcanumContact;
 import app.arcanum.contracts.IMessageReceiver;
+import app.arcanum.crypto.SHA256;
 import app.arcanum.helper.ToastUtils;
+import app.arcanum.providers.MessageContentProvider;
+import app.arcanum.providers.db.tables.MessageTable;
 import app.arcanum.services.MessageService;
-import app.arcanum.tasks.contracts.MessageResponse;
 import app.arcanum.ui.adapters.MessageViewAdapter;
-import app.arcanum.ui.contracts.MessageItem;
-import app.arcanum.ui.contracts.MessageItemCollection;
 import app.arcanum.ui.contracts.SyncType;
 
-public class MessageActivity extends Activity implements IMessageReceiver {
+public class MessageActivity extends FragmentActivity implements IMessageReceiver, LoaderManager.LoaderCallbacks<Cursor> {
+	private static final String TAG = MessageActivity.class.getSimpleName();
+	private static final String[] PROJECTION = new String[] { 
+		MessageTable.COLUMN_ID,
+		MessageTable.COLUMN_SENDER,
+		MessageTable.COLUMN_RECIPIENT,
+		MessageTable.COLUMN_CONTENT,
+		MessageTable.COLUMN_DATE
+	};
+	private static final String SELECTION = MessageTable.COLUMN_SENDER + " = ? OR " + MessageTable.COLUMN_RECIPIENT + " = ?";
+	private static final String SORT_ORDER = MessageTable.COLUMN_DATE + " COLLATE LOCALIZED ASC";
+	private static final int LOADER_ID = 1;
+	
 	private final ServiceConnection _messageServiceConnection = new MessageServiceConnection();
 	
 	private ArcanumContact _contact;
 	private MessageService _messageService;
 	
-	private ListView 				_messageView;
-	private MessageViewAdapter 		_messageViewAdapter;
-	private MessageItemCollection 	_messageViewList;
-
-	private String TAG;
+	private ListView 			_messageView;
+	private MessageViewAdapter 	_messageViewAdapter;
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -46,14 +59,26 @@ public class MessageActivity extends Activity implements IMessageReceiver {
 		if(!AppSettings.isInitialized)
 			AppSettings.init(this);
 		
-		// Initialize contacts
-		MessageClickListener clickListener = new MessageClickListener();
-		_messageViewList = new MessageItemCollection();
-		_messageViewAdapter = new MessageViewAdapter(this, android.R.layout.simple_list_item_1, _messageViewList);
+		// Set contact & Activity title
+        Bundle bundle = getIntent().getExtras();
+        if(bundle != null) {
+        	Object contact = bundle.get("contact");
+            if(contact != null && contact instanceof ArcanumContact) {
+            	_contact = (ArcanumContact)contact;
+            	setTitle(getString(R.string.msg_title, _contact.DisplayName));
+            }
+        }  
+                
+        // Initialize Content Provider connection with ListView
+		MessageClickListener clickListener = new MessageClickListener();		
+		_messageViewAdapter = new MessageViewAdapter(this);
 		_messageView = (ListView)findViewById(R.id.message_listview);
 		_messageView.setAdapter(_messageViewAdapter);
 		_messageView.setOnItemClickListener(clickListener);
 		_messageView.setOnItemLongClickListener(clickListener);
+		
+		LoaderManager lm = getSupportLoaderManager();
+	    lm.initLoader(LOADER_ID, null, this);
 		
 		// Get Controls
         final EditText txtMessage = (EditText)findViewById(R.id.message_edittext);
@@ -74,16 +99,6 @@ public class MessageActivity extends Activity implements IMessageReceiver {
 				}
             }
         });
-        
-        // Set contact & Activity title
-        Bundle bundle = getIntent().getExtras();
-        if(bundle != null) {
-        	Object contact = bundle.get("contact");
-            if(contact != null && contact instanceof ArcanumContact) {
-            	_contact = (ArcanumContact)contact;
-            	setTitle(getString(R.string.msg_title, _contact.DisplayName));
-            }
-        }  
 	}
 
 	@Override
@@ -137,42 +152,29 @@ public class MessageActivity extends Activity implements IMessageReceiver {
                 startActivity(myIntent);
 		    	return true;
 		    case R.id.menu_settings:
+				Intent settingsIntent = new Intent(getBaseContext(), SettingsActivity.class);
+				startActivity(settingsIntent);
 		        return true;
 		    default:
 		        return super.onOptionsItemSelected(item);
 	    }
 	}
-	
+
 	private void syncMessages(SyncType requestType) {
 		if(_messageService == null || _contact == null)
 			return;
 		
-		MessageResponse[] result;
 		switch(requestType) {
 			case PUSHED:
-				result = _messageService.getUnreadMessages(_contact);
+				_messageService.getUnreadMessages(_contact);
 				break;
 			case INIT:
 			default:
-				result = _messageService.getMessages(_contact);
+				_messageService.getMessages(_contact);
 				break;			
 		}
-		
-		if(result == null || result.length == 0)
-			return;
-		
-		for(MessageResponse item : result) {
-			if(_messageViewList.containsByID(item.Key))
-				continue;
-			Log.d(TAG, String.format("Adding message item with id %d.", item.Key));
-			
-			MessageItem newItem = MessageItem.newInstance(item);
-			if(newItem.setContent(item.Content))
-				_messageViewList.add(newItem);
-		}
-		_messageViewAdapter.notifyDataSetChanged();
 	}
-	
+
 	private class MessageServiceConnection implements ServiceConnection {
 		@Override
 		public void onServiceConnected(ComponentName className, IBinder binder) {
@@ -188,7 +190,7 @@ public class MessageActivity extends Activity implements IMessageReceiver {
 		@Override
 		public void onServiceDisconnected(ComponentName className) {
 			_messageService.unregisterMessageActivity(MessageActivity.this);
-			//_messageService = null;
+			_messageService = null;
 		}
 	}
 
@@ -228,5 +230,34 @@ public class MessageActivity extends Activity implements IMessageReceiver {
 	@Override
 	public void pushMessage() {
 		syncMessages(SyncType.PUSHED);
+	}
+
+	@Override
+	public Loader<Cursor> onCreateLoader(int id, Bundle bundle) {
+		switch(id) {
+			case LOADER_ID:
+				String contactHash = SHA256.hash(_contact.Token);
+				return new CursorLoader(this, MessageContentProvider.CONTENT_URI,
+			        PROJECTION,
+			        SELECTION,
+			        new String[] { contactHash, contactHash },
+			        SORT_ORDER);
+		}
+		Log.e(TAG, String.format("Creating Loader with id %d failed.", id));
+		return null;
+	}
+
+	@Override
+	public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+		switch(loader.getId()) {
+			case LOADER_ID:
+				_messageViewAdapter.swapCursor(cursor);
+				break;
+		}
+	}
+
+	@Override
+	public void onLoaderReset(Loader<Cursor> loader) {
+		_messageViewAdapter.swapCursor(null);
 	}
 }

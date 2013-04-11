@@ -93,11 +93,16 @@ class CryptoHandler(webapp2.RequestHandler):
         self.response.write(prv);
         '''
         
+class WarmupHandler(webapp2.RequestHandler):
+    def get(self):
+        pass
+        
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__))
 )
 app = webapp2.WSGIApplication([
     (r'/', MainHandler),
     (r'/settings/', SettingsHandler),
-    (r'/gen/crypto/(\d+)', CryptoHandler)
+    (r'/gen/crypto/(\d+)', CryptoHandler),
+    (r'/_ah/warmup', WarmupHandler)
 ], debug=True)

@@ -13,22 +13,21 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
@@ -37,14 +36,16 @@ import android.util.Base64;
 import android.util.Log;
 import app.arcanum.AppSettings;
 import app.arcanum.crypto.ICrypto;
+import app.arcanum.crypto.exceptions.CryptoException;
 import app.arcanum.crypto.exceptions.DecryptException;
 import app.arcanum.crypto.exceptions.EncryptException;
 
 public class RsaCrypto implements ICrypto {
-	private final static String TAG = "RsaCrypto";
+	private final static String TAG = RsaCrypto.class.getSimpleName();
 	
 	final static String ALGORITHM = "RSA";
 	final static String ALGORITHM_FULL = "RSA/NONE/PKCS1Padding";
+	final static String SIGNATURE = "SHA512withRSA";
 	final static String PREF_RSA_PUBLIC_KEY = "ARCANUM_RSA_PUBLICKEY";
 	final static String PREF_RSA_PRIVATE_KEY = "ARCANUM_RSA_PRIVATEKEY";
 	final static String PREF_RSA_SERVER_PUBKEY = "ARCANUM_RSA_SERVER_PUBLICKEY";
@@ -140,7 +141,7 @@ public class RsaCrypto implements ICrypto {
 		return encrypt(plaintext, _serverPublicKey);
 	}
 	
-	private static byte[] encrypt(byte[] plaintext, PublicKey key) throws EncryptException {
+	public byte[] encrypt(byte[] plaintext, PublicKey key) throws EncryptException {
 		try {
 			Cipher cipher = Cipher.getInstance(ALGORITHM_FULL);
 		    cipher.init(Cipher.ENCRYPT_MODE, key);
@@ -180,6 +181,37 @@ public class RsaCrypto implements ICrypto {
 		}
 	}
 	
+	public byte[] sign(byte[] plaintext) throws CryptoException {
+		try {
+			Signature instance = Signature.getInstance(SIGNATURE);
+			instance.initSign(_privateKey);
+			instance.update(plaintext);
+			byte[] sign = instance.sign();
+			return sign;
+		} catch(InvalidKeyException ex) {
+			throw new CryptoException("InvalidKeyException", ex);
+		} catch(NoSuchAlgorithmException ex) {
+			throw new CryptoException("NoSuchAlgorithmException", ex);
+		} catch(SignatureException ex) {
+			throw new CryptoException("SignatureException", ex);
+		}
+	}
+	
+	public boolean verify(byte[] plaintext, byte[] sign, PublicKey publicKey) throws CryptoException {
+		try {
+			Signature instance = Signature.getInstance(SIGNATURE);
+			instance.initVerify(publicKey);
+			instance.update(plaintext);
+			return instance.verify(sign);
+		} catch(InvalidKeyException ex) {
+			throw new CryptoException("InvalidKeyException", ex);
+		} catch(NoSuchAlgorithmException ex) {
+			throw new CryptoException("NoSuchAlgorithmException", ex);
+		} catch(SignatureException ex) {
+			throw new CryptoException("SignatureException", ex);
+		}
+	}
+
 	public void load_serverPublicKey() {
 		_taskServer = new LoadServerPublickeyTask().execute();
 	}
